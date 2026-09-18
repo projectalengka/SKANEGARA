@@ -375,6 +375,28 @@ npm run db:seed      # isi konten awal (hanya sekali)
 
 Buka `https://<domain-anda>/admin/masuk` dan masuk.
 
+### Kontrol versi
+
+Repositori ini sudah di-`git init`. Yang **tidak** ikut ter-commit: `.env`
+(kredensial sungguhan), `.pgdata/` (basis data lokal), dan `.workbuddy-ai/`
+(catatan kerja). Ketiganya ada di `.gitignore`.
+
+Sebelum commit pertama ke repositori publik, pastikan tidak ada kredensial yang
+ikut. `.gitignore` yang salah tulis **tidak error** — ia hanya diam-diam tidak
+melindungi apa pun. Ujilah polanya, jangan diasumsikan:
+
+```bash
+git check-ignore -v .env .pgdata/PG_VERSION   # harus menyebut aturan yang cocok
+git grep -iE 'AUTH_SECRET|ADMIN_PASSWORD' HEAD -- ':!.env.example'
+```
+
+Perintah kedua harus **tidak** menemukan apa pun selain contoh di dokumentasi.
+
+**Kalau `.env` sudah terlanjur ter-commit**, mengganti isinya dengan versi
+kosong tidak cukup — nilainya tetap ada di riwayat git. Ganti dulu kredensialnya
+(`AUTH_SECRET` dan `ADMIN_PASSWORD`), baru bersihkan riwayat. Menganggapnya
+hilang setelah menimpa berkas adalah kesalahan yang mahal.
+
 ### Catatan khusus Vercel
 
 - **Tidak ada berkas lokal.** Semua unggahan ke Cloudinary.
