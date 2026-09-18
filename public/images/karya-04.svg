@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1250" width="1000" height="1250" role="img" aria-label="Karya 04">
+  <rect width="1000" height="1250" fill="#ffffff" />
+  <rect x="0" y="0" width="1000" height="1250" fill="#f2f2f2" fill-opacity="0.55" />
+  <rect x="180" y="175.00000000000003" width="640" height="650" fill="none" stroke="#0a0a0a" stroke-opacity="0.25" />
+  <rect x="180" y="175.00000000000003" width="640" height="195" fill="#0a0a0a" fill-opacity="0.85" />
+  <line x1="180" y1="950" x2="820" y2="950" stroke="#0a0a0a" stroke-opacity="0.2" />
+  <line x1="180" y1="1025" x2="600" y2="1025" stroke="#0a0a0a" stroke-opacity="0.14" />
+  <text x="180" y="1150" font-family="monospace" font-size="10" letter-spacing="2" fill="#0a0a0a" fill-opacity="0.4">KARYA 04</text>
+</svg>

@@ -1,0 +1,53 @@
+/* ===========================================================================
+   Fonts — self-hosted, SIL Open Font License 1.1
+   ---------------------------------------------------------------------------
+   Self-hosted rather than imported from Google: a stable URL can be preloaded,
+   and the file never changes hash mid-cache.
+
+   ## Satu rumpun saja, disengaja
+
+   Seluruh situs memakai **Instrument Sans**. Ini keputusan pemilik proyek:
+   judul serif diganti dengan sans minimalis.
+
+   Awalnya judul memakai Instrument Serif dan kontrasnya datang dari
+   *roman vs miring*. Tanpa serif, kontras itu harus dibangun ulang — dan
+   dibangun dari **berat**, bukan dari rumpun kedua. Judul memakai 500–600,
+   teks memakai 400. Satu rumpun dengan dua berat membaca sebagai satu suara
+   yang tenang; menambahkan rumpun kedua justru mengembalikan kekacauan yang
+   ingin dihindari.
+
+   JetBrains Mono tetap ada, dan bukan sisa yang terlupa: label huruf kapital
+   kecil (nomor bagian, tanggal, penanda kategori) butuh lebar tetap supaya
+   sejajar rapi di beberapa baris. Monospace di sini adalah *alat ukur*,
+   bukan hiasan.
+
+   Licensing note: kedua rumpun ini OFL. Nothing commercial is shipped.
+   See public/fonts/README.md.
+   =========================================================================== */
+
+@font-face {
+  font-family: 'Instrument Sans';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/instrument-sans-var.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+2122, U+2212;
+}
+
+@font-face {
+  font-family: 'Instrument Sans';
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/instrument-sans-var-italic.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+2122, U+2212;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/jetbrains-mono-var.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+2122, U+2212;
+}

@@ -1,0 +1,53 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# next.js
+.next/
+out/
+next-env.d.ts
+tsconfig.tsbuildinfo
+
+# production
+dist/
+build/
+
+# environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# vercel
+.vercel
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# os
+.DS_Store
+Thumbs.db
+
+# editor
+.vscode/settings.json
+.idea/
+
+# qa artefacts
+outputs/*.png
+outputs/*-report.json
+
+# basis data lokal untuk pengembangan
+# Cluster PostgreSQL khusus proyek ini. Isinya data uji, bukan data sekolah,
+# dan tidak boleh ikut ter-commit — yayasan berkasnya bisa puluhan MB.
+.pgdata/
+.pgdata-site/
+
+# catatan kerja agen
+# Berisi catatan internal antar-sesi, bukan kode proyek. Isinya bisa memuat
+# potongan konfigurasi lokal dan keputusan yang belum matang — tidak ada
+# gunanya bagi siapa pun yang meng-clone repositori ini.
+.workbuddy-ai/

@@ -1,0 +1,145 @@
+// Prisma schema — SMK Jayanegara
+//
+// Target: PostgreSQL (Supabase, or any managed Postgres such as Neon).
+//
+// Prisma 7 moved the connection URL out of this file and into `prisma.config.ts`,
+// and moved the runtime connection to an explicit driver adapter. So the shape is:
+//
+//   prisma.config.ts     → CLI: migrations, db push, studio   (uses DIRECT_URL)
+//   src/lib/db.ts        → app: every query                   (uses DATABASE_URL)
+//
+// Two URLs, and the split matters on serverless: the app talks through the
+// pooled connection, migrations need a real session. On Vercel a pooled URL is
+// not an optimisation, it is what keeps the connection count sane.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// The single school profile row. `slug` is always "utama" so a lookup is
+/// unambiguous and the row can be upserted idempotently by the seed.
+model SchoolProfile {
+  id          String   @id @default(cuid())
+  slug        String   @unique @default("utama")
+  schoolName  String   @default("SMK Jayanegara")
+  tagline     String   @default("")
+  heroLines   String[] @default([])
+  description String   @default("")
+  history     String   @default("")
+  vision      String   @default("")
+  mission     String[] @default([])
+  address     String   @default("")
+  city        String   @default("Mojokerto")
+  province    String   @default("Jawa Timur")
+  phone       String   @default("")
+  whatsapp    String   @default("")
+  email       String   @default("")
+  instagram   String   @default("")
+  youtube     String   @default("")
+  mapsUrl     String   @default("")
+  updatedAt   DateTime @updatedAt
+}
+
+/// A competency programme (jurusan), e.g. Desain Komunikasi Visual.
+model Program {
+  id               String   @id @default(cuid())
+  name             String
+  slug             String   @unique
+  shortDescription String   @default("")
+  description      String   @default("")
+  image            String   @default("")
+  imagePublicId    String   @default("")
+  features         String[] @default([])
+  order            Int      @default(0)
+  published        Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([published, order])
+}
+
+/// A news article. `slug` doubles as the public URL segment.
+model News {
+  id            String    @id @default(cuid())
+  title         String
+  slug          String    @unique
+  category      String    @default("Umum")
+  excerpt       String    @default("")
+  content       String    @default("")
+  coverImage    String    @default("")
+  coverPublicId String    @default("")
+  published     Boolean   @default(false)
+  publishedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([published, publishedAt])
+}
+
+/// A gallery photo. `order` drives the editorial composition on the homepage.
+model GalleryItem {
+  id          String   @id @default(cuid())
+  title       String
+  image       String
+  publicId    String   @default("")
+  category    String   @default("Umum")
+  description String   @default("")
+  order       Int      @default(0)
+  published   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([published, order])
+}
+
+/// A dated school event.
+model Event {
+  id          String    @id @default(cuid())
+  title       String
+  slug        String    @unique
+  description String    @default("")
+  image       String    @default("")
+  publicId    String    @default("")
+  date        DateTime
+  endDate     DateTime?
+  location    String    @default("")
+  published   Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  @@index([published, date])
+}
+
+/// Work produced by students, shown in the exhibition section.
+model StudentWork {
+  id          String   @id @default(cuid())
+  title       String
+  studentName String   @default("")
+  category    String   @default("Desain Komunikasi Visual")
+  description String   @default("")
+  image       String
+  publicId    String   @default("")
+  year        Int?
+  order       Int      @default(0)
+  published   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([published, order])
+}
+
+/// Editable copy for the fixed sections (hero, introduction, CTA, contact…).
+/// Keeping this in the database is what makes the homepage editable without a
+/// redeploy: the brief is explicit that copy must be changeable through the CMS.
+model SiteSection {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  eyebrow   String   @default("")
+  title     String   @default("")
+  body      String   @default("")
+  ctaLabel  String   @default("")
+  ctaHref   String   @default("")
+  updatedAt DateTime @updatedAt
+}

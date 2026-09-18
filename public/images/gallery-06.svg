@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900" role="img" aria-label="Galeri 06">
+  <rect width="1200" height="900" fill="#0a0a0a" />
+  <rect x="134" y="230" width="56" height="56" fill="#ffffff" fill-opacity="0.040" /><rect x="171" y="283" width="56" height="56" fill="#ffffff" fill-opacity="0.055" /><rect x="208" y="336" width="56" height="56" fill="#ffffff" fill-opacity="0.070" /><rect x="245" y="389" width="56" height="56" fill="#ffffff" fill-opacity="0.085" /><rect x="282" y="442" width="56" height="56" fill="#ffffff" fill-opacity="0.100" />
+  <line x1="0" y1="450" x2="1200" y2="450" stroke="#ffffff" stroke-opacity="0.12" />
+  <rect x="144" y="448" width="192" height="4" fill="#c8341f" />
+  <text x="144" y="426" font-family="monospace" font-size="11" letter-spacing="2" fill="#ffffff" fill-opacity="0.5">GALERI 06</text>
+</svg>

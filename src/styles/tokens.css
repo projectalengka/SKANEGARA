@@ -1,0 +1,100 @@
+@import 'tailwindcss';
+
+/* ===========================================================================
+   SMK JAYANEGARA — design tokens
+   ---------------------------------------------------------------------------
+   One document, one source of truth. Tailwind consumes these through
+   `@theme`; plain CSS consumes them as custom properties. Changing a colour
+   here changes it everywhere, which is the only way a "single accent" rule
+   survives contact with a real project.
+   =========================================================================== */
+
+@theme {
+  /* -- Surface ------------------------------------------------------------ */
+  --color-ink: #0a0a0a;
+  --color-ink-soft: #131313;
+  --color-paper: #ffffff;
+  --color-paper-warm: #f2f2f2;
+  --color-line: #e2e2e2;
+  --color-line-dark: #2a2a2a;
+
+  /* -- Text --------------------------------------------------------------- */
+  --color-text: #0a0a0a;
+  --color-text-muted: #666666;
+  --color-text-faint: #bdbdbd;
+
+  /* -- Accent -------------------------------------------------------------
+     A single spot ink. It is a *mark* — a rule, an index, a hover state —
+     never a field. This is what keeps a two-colour page from looking cheap.
+     Swap this one value to re-brand the whole site.
+     ---------------------------------------------------------------------- */
+  --color-accent: #c8341f;
+  --color-accent-deep: #9c2716;
+
+  /* -- Type ---------------------------------------------------------------
+     One family, two weights. The headline and the body copy share a skeleton,
+     so the page reads as a single voice; the contrast that used to come from
+     serif-vs-italic now comes from weight (display 600, text 400) and from
+     size. Fewer decisions, and nothing to drift out of tune.
+
+     `--font-display` is kept as a name so a future swap back to a second
+     family is a one-line change rather than a hunt through the codebase.
+     ---------------------------------------------------------------------- */
+  --font-display: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* -- Motion -------------------------------------------------------------
+     Expo-out. Fast departure, long settle. A symmetric ease reads as
+     "mechanical"; this reads as a thing with weight coming to rest.
+     ---------------------------------------------------------------------- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-line: cubic-bezier(0.83, 0, 0.17, 1);
+
+  /* -- Geometry -----------------------------------------------------------
+     Nearly square. A 2px radius reads as precision; 20px reads as a friendly
+     app. The brief asks for an institution, not an app.
+     ---------------------------------------------------------------------- */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+
+  /* -- Layout ------------------------------------------------------------- */
+  --gutter: 1.25rem;
+  --measure: 68ch;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --gutter: 2rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --gutter: 3rem;
+  }
+}
+
+/* Type scale — fluid, but clamped so a 1920px monitor does not get a 300px
+   headline, and a 320px phone does not get one that has to wrap mid-word. */
+:root {
+  --step--2: clamp(0.625rem, 0.6rem + 0.12vw, 0.6875rem);
+  --step--1: clamp(0.75rem, 0.72rem + 0.14vw, 0.8125rem);
+  --step-0: clamp(0.9375rem, 0.9rem + 0.2vw, 1rem);
+  --step-1: clamp(1.125rem, 1.05rem + 0.35vw, 1.3125rem);
+  --step-2: clamp(1.375rem, 1.2rem + 0.75vw, 1.75rem);
+  --step-3: clamp(1.75rem, 1.4rem + 1.6vw, 2.75rem);
+  --step-4: clamp(2.25rem, 1.5rem + 3.4vw, 4.5rem);
+  --step-5: clamp(2.75rem, 1.3rem + 6.6vw, 8rem);
+  --step-6: clamp(3.25rem, 0.6rem + 12vw, 13rem);
+
+  --section-y: clamp(5rem, 3rem + 9vw, 12rem);
+  --nav-h: 4.5rem;
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --nav-h: 5.5rem;
+  }
+}

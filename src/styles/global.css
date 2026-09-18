@@ -1,0 +1,526 @@
+@import './tokens.css';
+@import './fonts.css';
+
+/* ===========================================================================
+   Base
+   =========================================================================== */
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  /* Lenis drives scrolling on the client. When it is active it takes over
+     `scroll-behavior`, and leaving this on would make the two fight. */
+  html.lenis,
+  html.lenis body {
+    height: auto;
+  }
+
+  html.lenis {
+    scroll-behavior: auto;
+  }
+
+  .lenis.lenis-smooth {
+    scroll-behavior: auto !important;
+  }
+
+  .lenis.lenis-stopped {
+    overflow: hidden;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-paper);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--step-0);
+    line-height: 1.6;
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+
+    /* The brief asks for zero horizontal overflow at 320px. This is the belt
+       to the layout's braces — it catches a single stray transform or a
+       long unbreakable URL before it becomes a whole-page scrollbar. */
+    overflow-x: clip;
+  }
+
+  img,
+  picture,
+  video,
+  canvas,
+  svg {
+    display: block;
+    max-width: 100%;
+  }
+
+  input,
+  button,
+  textarea,
+  select {
+    font: inherit;
+    color: inherit;
+  }
+
+  button {
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* Focus styles. Visible, on brand, and only for keyboard users — a mouse
+     click should not leave a ring behind on a button. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+    border-radius: var(--radius-sm);
+  }
+
+  ::selection {
+    background: var(--color-ink);
+    color: var(--color-paper);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    margin: 0;
+    font-weight: 400;
+    text-wrap: balance;
+  }
+
+  p {
+    margin: 0;
+    text-wrap: pretty;
+  }
+
+  ul,
+  ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+}
+
+/* ===========================================================================
+   Type roles
+   ---------------------------------------------------------------------------
+   Satu rumpun, dua berat. Judul memakai 600 dengan tracking rapat supaya
+   tetap terasa seperti keputusan desain, bukan teks yang diperbesar. Teks
+   memakai 400. Kontras antar keduanya adalah keseluruhan desainnya.
+   =========================================================================== */
+
+@layer components {
+  .display {
+    font-family: var(--font-display);
+    font-weight: 600;
+    line-height: 0.94;
+    /* Sans butuh tracking lebih rapat daripada serif pada ukuran besar:
+       tanpa serif, huruf-huruf berdiri lebih berjarak dan judul besar jadi
+       terasa longgar. Nilai ini yang membuatnya tetap rapat dan mahal. */
+    letter-spacing: -0.035em;
+  }
+
+  .display em {
+    font-style: normal;
+    font-weight: 400;
+    /* Dulu miring serif adalah aksennya. Dengan satu rumpun, aksen itu
+       dipindahkan ke *berat*: bagian yang ditekankan turun ke 400 terhadap
+       judul 600. Kontrasnya tetap ada, tapi tidak lagi bergantung pada
+       rumpun kedua — dan tetap terbaca sebagai penekanan, bukan sebagai
+       huruf yang salah render. */
+  }
+
+  .label {
+    font-family: var(--font-mono);
+    font-size: var(--step--2);
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+
+  .prose-body {
+    max-width: var(--measure);
+    font-size: var(--step-1);
+    line-height: 1.65;
+    color: var(--color-text-muted);
+  }
+
+  /* Hairline rules, in the two directions the site needs. */
+  .rule {
+    height: 1px;
+    width: 100%;
+    background: var(--color-line);
+  }
+
+  .rule-dark {
+    height: 1px;
+    width: 100%;
+    background: var(--color-line-dark);
+  }
+}
+
+/* ===========================================================================
+   Layout primitives
+   =========================================================================== */
+
+@utility shell {
+  width: 100%;
+  max-width: 96rem;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+@utility shell-wide {
+  width: 100%;
+  max-width: 120rem;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+@utility section-y {
+  padding-block: var(--section-y);
+}
+
+/* ===========================================================================
+   Reveal primitives
+   ---------------------------------------------------------------------------
+   The no-JS and reduced-motion contract: if the observer never runs, the
+   content must still be visible. So the *hidden* state is applied by a class
+   that only JavaScript adds. Absence of script means presence of content.
+   =========================================================================== */
+
+[data-reveal] {
+  --reveal-y: 22px;
+  --reveal-delay: 0ms;
+}
+
+.js [data-reveal] {
+  opacity: 0;
+  transform: translate3d(0, var(--reveal-y), 0);
+  will-change: opacity, transform;
+}
+
+.js [data-reveal].is-revealed {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 1.1s var(--ease-out) var(--reveal-delay),
+    transform 1.1s var(--ease-out) var(--reveal-delay);
+  will-change: auto;
+}
+
+/* Image reveal: a wipe, not a fade. A fade says "here is a picture"; a wipe
+   says "here is a picture being uncovered", which is the editorial cue. */
+.js [data-image-reveal] {
+  clip-path: inset(0 0 100% 0);
+}
+
+.js [data-image-reveal].is-revealed {
+  clip-path: inset(0 0 0 0);
+  transition: clip-path 1.2s var(--ease-out) var(--reveal-delay, 0ms);
+}
+
+.js [data-image-reveal] > * {
+  transform: scale(1.06);
+  transition: transform 1.4s var(--ease-out) var(--reveal-delay, 0ms);
+}
+
+.js [data-image-reveal].is-revealed > * {
+  transform: scale(1);
+}
+
+/* Line-by-line text reveal. Each line sits in its own overflow-hidden box,
+   so the text appears to rise out of the page rather than fade onto it. */
+.js .line-mask {
+  display: block;
+  overflow: hidden;
+  padding-block: 0.06em;
+  margin-block: -0.06em;
+}
+
+/* The hidden start state. Applied by CSS so that a line is already masked
+   before any script runs — the alternative, waiting for GSAP to hide it, means
+   a visible flash of the finished headline on every load.
+
+   Note there is deliberately NO `transition` here. The reveal is driven by GSAP
+   (`revealLines` / `heroEntrance`), and GSAP writes the transform inline on
+   every frame.
+
+   A CSS transition on the same property is not merely redundant, it is a bug
+   with a silent failure mode: GSAP detects the transition, refuses to fight it
+   on the `transform` shorthand, and splits the movement across the individual
+   `translate` property and `transform`. Animating `yPercent` then only moves
+   one channel and the line never appears. Measured against the shipping build:
+
+     translate: none; rotate: none; scale: none;
+     transform: translate(0%, 110%) translate(0px, 151.353px);
+
+   `yPercent: 0` collapses the first half; the 151.353px stays. The element is
+   present, opaque, and completely invisible — the harness sees a heading, the
+   visitor sees nothing. One engine, one property. */
+.js .line-mask > span {
+  display: block;
+  transform: translate3d(0, 110%, 0);
+}
+
+/* The class handoff, kept for the paths that reveal by adding a class rather
+   than by tweening (the IntersectionObserver fallback and `observeReveals`).
+   `!important` because GSAP's inline transform would otherwise win, and this
+   rule only ever applies to an element GSAP has not been asked to animate. */
+.js .is-revealed .line-mask > span,
+.js .line-mask.is-revealed > span {
+  transform: none;
+  transition: transform 1.1s var(--ease-out);
+  transition-delay: var(--line-delay, 0ms);
+}
+
+/* ===========================================================================
+   Buttons
+   =========================================================================== */
+
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 1.5rem;
+  border: 1px solid var(--color-ink);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1;
+  overflow: hidden;
+  isolation: isolate;
+  transition: color 0.5s var(--ease-out);
+}
+
+/* The fill rises from the bottom on hover. Doing it with a pseudo-element
+   that is already painted keeps the animation on `transform`, so it costs a
+   compositor layer and nothing else. */
+.btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--color-ink);
+  transform: translate3d(0, 101%, 0);
+  transition: transform 0.55s var(--ease-out);
+}
+
+.btn:hover::before,
+.btn:focus-visible::before {
+  transform: translate3d(0, 0, 0);
+}
+
+.btn--solid {
+  background: var(--color-ink);
+  color: var(--color-paper);
+}
+
+.btn--solid::before {
+  background: var(--color-accent);
+  transform: translate3d(0, 101%, 0);
+}
+
+.btn--solid:hover,
+.btn--solid:focus-visible {
+  color: var(--color-paper);
+}
+
+.btn--ghost {
+  border-color: var(--color-line);
+  color: var(--color-text);
+}
+
+.btn--ghost:hover,
+.btn--ghost:focus-visible {
+  color: var(--color-paper);
+  border-color: var(--color-ink);
+}
+
+.btn--on-dark {
+  border-color: rgb(255 255 255 / 0.28);
+  color: var(--color-paper);
+}
+
+.btn--on-dark::before {
+  background: var(--color-paper);
+}
+
+.btn--on-dark:hover,
+.btn--on-dark:focus-visible {
+  color: var(--color-ink);
+  border-color: var(--color-paper);
+}
+
+.btn__arrow {
+  transition: transform 0.5s var(--ease-out);
+}
+
+.btn:hover .btn__arrow,
+.btn:focus-visible .btn__arrow {
+  transform: translate3d(4px, 0, 0);
+}
+
+/* Text link with a rule that draws itself in. */
+.link-line {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.link-line::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -3px;
+  height: 1px;
+  width: 100%;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.5s var(--ease-out);
+}
+
+.link-line:hover::after,
+.link-line:focus-visible::after {
+  transform: scaleX(1);
+}
+
+/* ===========================================================================
+   Forms — shared by the admin dashboard and the public contact form.
+   =========================================================================== */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.field__label {
+  font-family: var(--font-mono);
+  font-size: var(--step--2);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.field__input,
+.field__textarea,
+.field__select {
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  background: var(--color-paper);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  font-size: var(--step-0);
+  transition: border-color 0.3s var(--ease-out);
+}
+
+.field__input:hover,
+.field__textarea:hover,
+.field__select:hover {
+  border-color: var(--color-text-faint);
+}
+
+.field__input:focus,
+.field__textarea:focus,
+.field__select:focus {
+  outline: none;
+  border-color: var(--color-ink);
+}
+
+.field__textarea {
+  min-height: 9rem;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.field__hint {
+  font-size: var(--step--1);
+  color: var(--color-text-muted);
+}
+
+/* ===========================================================================
+   Reduced motion
+   ---------------------------------------------------------------------------
+   Not "slower" — absent. Every transform-based entrance resolves instantly
+   to its final state, and the smooth scroll is never started.
+   =========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .js [data-reveal],
+  .js [data-image-reveal] {
+    opacity: 1;
+    transform: none;
+    clip-path: none;
+  }
+
+  .js [data-image-reveal] > *,
+  .js .line-mask > span {
+    transform: none;
+  }
+}
+
+/* Utility for content that is only for screen readers, used on skip links
+   and icon-only controls. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 200;
+  padding: 0.75rem 1.25rem;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transform: translateY(-120%);
+  transition: transform 0.3s var(--ease-out);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
