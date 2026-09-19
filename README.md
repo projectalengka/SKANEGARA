@@ -7,6 +7,11 @@ dasbor admin untuk mengelola seluruh isinya tanpa menyentuh kode.
 Dibangun dengan Next.js App Router, PostgreSQL (Supabase), Prisma, Cloudinary,
 GSAP + Lenis. Seluruh antarmuka berbahasa Indonesia.
 
+> **Baru pertama kali di sini?** Baca **[`PANDUAN.md`](./PANDUAN.md)** lebih dulu.
+> Isinya langkah praktis dari nol sampai situs jalan — menjalankan di komputer
+> sendiri, mengelola konten, sampai men-deploy ke internet. Berkas ini (README)
+> lebih rinci dan teknis; `PANDUAN.md` yang dibaca saat Anda ingin langsung bekerja.
+
 ---
 
 ## Daftar Isi
@@ -377,16 +382,24 @@ Buka `https://<domain-anda>/admin/masuk` dan masuk.
 
 ### Kontrol versi
 
-Repositori ini sudah di-`git init`. Yang **tidak** ikut ter-commit: `.env`
-(kredensial sungguhan), `.pgdata/` (basis data lokal), dan `.workbuddy-ai/`
-(catatan kerja). Ketiganya ada di `.gitignore`.
+Repositori ini sudah di-`git init`. Yang **tidak** ikut ter-commit: semua varian
+`.env` (kredensial sungguhan), `.pgdata/` (basis data lokal), dan
+`.workbuddy-ai/` (catatan kerja). Ketiganya ada di `.gitignore`.
+
+> **Semua varian `.env` diabaikan, bukan hanya yang bernama persis `.env`.**
+> Polanya `.env.*` ditambah `!.env.example`. Ini bukan kehati-hatian berlebihan:
+> daftar nama satu per satu pernah gagal di proyek ini — `.env.lokal` dan
+> `.env.produksi` tidak masuk daftar, padahal `PANDUAN.md` menyuruh membuat
+> berkas itu dengan kredensial Supabase sungguhan. Berkas yang tidak diabaikan
+> **tidak memunculkan galat apa pun**; ia hanya diam-diam terunggah.
+> `tests/verify-db.test.ts` mengunci pola ini.
 
 Sebelum commit pertama ke repositori publik, pastikan tidak ada kredensial yang
 ikut. `.gitignore` yang salah tulis **tidak error** — ia hanya diam-diam tidak
 melindungi apa pun. Ujilah polanya, jangan diasumsikan:
 
 ```bash
-git check-ignore -v .env .pgdata/PG_VERSION   # harus menyebut aturan yang cocok
+git check-ignore -v .env .env.lokal .pgdata/PG_VERSION   # harus menyebut aturan yang cocok
 git grep -iE 'AUTH_SECRET|ADMIN_PASSWORD' HEAD -- ':!.env.example'
 ```
 
@@ -554,9 +567,11 @@ kebetulan ingat memanggil pemeriksaan sesi.
 
 | Perintah | Kegunaan |
 | --- | --- |
-| `npm run dev` | Server pengembangan |
+| `npm run dev` | Server pengembangan (hanya dari komputer sendiri) |
+| `npm run dev:jaringan` | Sama, tapi bisa dibuka dari HP di WiFi yang sama |
 | `npm run build` | Build produksi |
-| `npm run start` | Jalankan hasil build |
+| `npm run start` | Jalankan hasil build (hanya dari komputer sendiri) |
+| `npm run start:jaringan` | Jalankan hasil build, bisa dibuka dari HP |
 | `npm run lint` | ESLint |
 | `npm run check` | TypeScript (`tsc --noEmit`) |
 | `npm test` | Uji unit (`node:test`) |
@@ -568,6 +583,12 @@ kebetulan ingat memanggil pemeriksaan sesi.
 | `npm run db:studio` | Buka Prisma Studio |
 | `npm run db:seed` | Isi konten awal |
 | `npm run db:verify` | Verifikasi jalur basis data ujung ke ujung |
+
+> **Kenapa ada varian `:jaringan`.** Secara bawaan server hanya mengikat ke
+> `127.0.0.1`, sehingga perangkat lain **tidak bisa** membukanya — itu pilihan
+> sadar, bukan kelalaian. Untuk memperlihatkan situs dari HP, `:jaringan` membuka
+> ke seluruh jaringan lokal. Pakai hanya di jaringan tepercaya, karena siapa pun
+> di jaringan itu bisa membuka dasbor admin bila tahu alamatnya.
 
 ---
 

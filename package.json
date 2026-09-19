@@ -16,7 +16,9 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "db:verify": "tsx scripts/verify-db.ts",
-    "qa": "npm run check && npm run lint && npm test && npm run build"
+    "qa": "npm run check && npm run lint && npm test && npm run build",
+    "dev:jaringan": "next dev --webpack --hostname 0.0.0.0",
+    "start:jaringan": "next start --hostname 0.0.0.0"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",

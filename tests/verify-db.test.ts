@@ -134,3 +134,48 @@ describe('setiap skrip memuat .env sendiri', () => {
     });
   }
 });
+
+/**
+ * `.gitignore` harus menutup **semua** varian `.env`, bukan daftar nama.
+ *
+ * Daftar nama satu per satu pernah gagal di proyek ini: `.env.lokal` dan
+ * `.env.produksi` tidak masuk daftar, padahal `PANDUAN.md` menyuruh membuat
+ * berkas itu dengan kredensial Supabase sungguhan di dalamnya. Berkas yang
+ * tidak diabaikan tidak memunculkan galat apa pun — ia hanya diam-diam
+ * terunggah ke GitHub.
+ *
+ * Uji ini membaca `.gitignore` sebagai teks (tanpa memanggil git, supaya tetap
+ * jalan di lingkungan mana pun) dan memastikan:
+ *   1. Ada pola `*` yang menutup varian apa pun, bukan daftar nama tetap.
+ *   2. `.env.example` dikecualikan kembali, karena ia memang dibagikan.
+ */
+describe('.gitignore menutup semua varian .env', () => {
+  const ignore = readFileSync(new URL('../.gitignore', import.meta.url), 'utf8');
+  const lines = ignore.split('\n').map((l) => l.trim());
+
+  it('memakai pola wildcard, bukan daftar nama satu per satu', () => {
+    assert.ok(
+      lines.includes('.env.*'),
+      '.gitignore harus memuat `.env.*` — daftar nama tetap akan melewatkan ' +
+        'varian baru seperti `.env.lokal` atau `.env.produksi`, tanpa galat apa pun',
+    );
+  });
+
+  it('tetap melacak .env.example, karena isinya memang dibagikan', () => {
+    assert.ok(
+      lines.includes('!.env.example'),
+      '`.env.example` harus dikembalikan dengan `!` — tanpanya, pola `.env.*` ' +
+        'ikut mengabaikannya dan templat variabel hilang dari repositori',
+    );
+  });
+
+  it('tidak memakai daftar nama tetap untuk berkas rahasia', () => {
+    // Kalau seseorang mengembalikan daftar nama satu per satu, uji ini gagal.
+    const fixedNames = lines.filter((l) => /^\.env\.(local|development|test|production)$/.test(l));
+    assert.deepEqual(
+      fixedNames,
+      [],
+      'jangan kembali ke daftar nama tetap; pola `.env.*` sudah menutup semuanya',
+    );
+  });
+});

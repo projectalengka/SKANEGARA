@@ -14,11 +14,19 @@ dist/
 build/
 
 # environment
+# ---------------------------------------------------------------------------
+# Semua varian .env diabaikan, bukan hanya yang bernama persis `.env`.
+# Daftar nama satu per satu pernah gagal di proyek ini: `.env.lokal` dan
+# `.env.produksi` tidak masuk daftar, padahal keduanya berisi kredensial
+# Supabase yang sungguhan — dan berkas yang tidak diabaikan tidak
+# memunculkan galat apa pun saat ter-commit. Ia hanya diam-diam terunggah.
+#
+# Pola `*` menutup seluruh varian sekaligus, termasuk nama baru yang belum
+# terpikirkan. `.env.example` dikembalikan dengan `!` karena ia memang
+# sengaja dibagikan: isinya nama variabel tanpa nilai.
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
 
 # vercel
 .vercel
