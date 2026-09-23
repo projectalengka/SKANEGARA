@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useRef, useState, useTransition, type ReactNode } from 'react';
 import type { ActionResult } from '@/app/admin/content-actions';
+import { UPLOAD_ACCEPT, UPLOAD_HINT, uploadError } from '@/lib/upload-limits';
 import { cn } from '@/lib/utils';
 
 /**
@@ -374,6 +375,26 @@ export function DeleteButton({
  *
  * The public id travels with the URL because Cloudinary needs the id — not the
  * URL — to delete an asset later.
+ *
+ * ## Why the rules are applied twice
+ *
+ * `uploadError()` runs here, before the request, and again inside the server
+ * action. The client pass is not a security control — it is what turns "the
+ * button did nothing for eight seconds" into a sentence that says which rule
+ * was broken. The server pass is the control, because the same request can be
+ * made without a browser.
+ *
+ * ## Why the `try` is load-bearing
+ *
+ * A server action can fail in ways the action itself never sees: the request
+ * body can be rejected by the framework before the action runs, the connection
+ * can drop mid-upload, or the deployment can be replaced while the request is
+ * in flight. When that happens the call *rejects* rather than returning
+ * `{ ok: false }`. Measured 2026-09-24, before the body-size limit was raised:
+ * a 1,5 MB file produced an unhandled "Body exceeded 1 MB limit." and left this
+ * component reporting `'uploading'` forever — the spinner said "Mengunggah…"
+ * and never said anything else, because nothing was listening for the failure.
+ * Every path out of the upload now sets a status.
  */
 export function ImageUploadField({
   name,
@@ -398,9 +419,22 @@ export function ImageUploadField({
   const [message, setMessage] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
+  /** Puts the control back in a state where choosing the same file re-fires. */
+  const reset = () => {
+    if (inputRef.current) inputRef.current.value = '';
+  };
+
   const handleChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    const problem = uploadError(file);
+    if (problem) {
+      setStatus('error');
+      setMessage(problem);
+      reset();
+      return;
+    }
 
     setStatus('uploading');
     setMessage('');
@@ -408,18 +442,26 @@ export function ImageUploadField({
     const formData = new FormData();
     formData.append('image', file);
 
-    const result = await upload(formData);
+    try {
+      const result = await upload(formData);
 
-    if (result.ok) {
-      setUrl(result.url);
-      setPublicId(result.publicId);
-      setStatus('idle');
-      setMessage('Gambar berhasil diunggah.');
-    } else {
+      if (result.ok) {
+        setUrl(result.url);
+        setPublicId(result.publicId);
+        setStatus('idle');
+        setMessage('Gambar berhasil diunggah.');
+      } else {
+        setStatus('error');
+        setMessage(result.message);
+        reset();
+      }
+    } catch (error) {
+      // Logged for the developer; the administrator gets a sentence they can act
+      // on rather than a stack trace they cannot.
+      console.error('[admin] Permintaan unggah gagal sebelum action dijalankan.', error);
       setStatus('error');
-      setMessage(result.message);
-      // Reset the input so selecting the same file again re-fires the change.
-      if (inputRef.current) inputRef.current.value = '';
+      setMessage('Gambar gagal diunggah. Periksa koneksi Anda, lalu coba lagi.');
+      reset();
     }
   };
 
@@ -454,15 +496,13 @@ export function ImageUploadField({
             ref={inputRef}
             id={id}
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/avif"
+            accept={UPLOAD_ACCEPT}
             onChange={handleChange}
             disabled={status === 'uploading'}
             className="block w-full text-[length:var(--step-0)] file:mr-4 file:border file:border-[var(--color-line)] file:bg-[var(--color-paper)] file:px-4 file:py-2.5 file:font-[family-name:var(--font-mono)] file:text-[length:var(--step--2)] file:uppercase file:tracking-[0.12em]"
           />
 
-          <p className="field__hint mt-3">
-            {hint ?? 'JPG, PNG, WebP, atau AVIF. Maksimal 8 MB.'}
-          </p>
+          <p className="field__hint mt-3">{hint ?? UPLOAD_HINT}</p>
 
           {status === 'uploading' ? (
             <p className="field__hint mt-2" role="status">
@@ -488,7 +528,7 @@ export function ImageUploadField({
                 setPublicId('');
                 setMessage('');
                 setStatus('idle');
-                if (inputRef.current) inputRef.current.value = '';
+                reset();
               }}
               className="link-line mt-3 text-[length:var(--step-0)]"
             >

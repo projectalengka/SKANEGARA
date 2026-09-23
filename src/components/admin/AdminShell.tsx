@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 export function AdminShell({
   email,
   mode,
+  storage,
   schoolName,
   sample,
   sampleRaw,
@@ -28,6 +29,17 @@ export function AdminShell({
 }: {
   email: string;
   mode: 'database' | 'seed';
+  /**
+   * Whether Cloudinary credentials are present, so images can actually be
+   * uploaded.
+   *
+   * Reported here for the same reason the sample switch is: without it, the
+   * upload field looks like it works. Choosing a file produces a progress
+   * message and then a failure, and the only way to find out why is to open
+   * another page (`/admin/pengaturan`) and read a diagnostic list. A capability
+   * that is off should say so where it is used.
+   */
+  storage: boolean;
   /** From the content layer, not a literal — the profile is editable. */
   schoolName: string;
   /**
@@ -138,6 +150,18 @@ export function AdminShell({
               {mode === 'database' ? 'Basis data aktif' : 'Mode cadangan'}
             </span>
           </p>
+
+          {!storage ? (
+            <div className="mt-3 border border-[var(--color-accent-deep)] px-3 py-3">
+              <p className="label text-[var(--color-accent-deep)]">Unggah gambar belum aktif</p>
+              <p className="mt-2 text-[length:var(--step--1)] text-[var(--color-text-muted)]">
+                Kredensial Cloudinary belum diisi, jadi gambar tidak dapat diunggah. Isi{' '}
+                <code>CLOUDINARY_CLOUD_NAME</code>, <code>CLOUDINARY_API_KEY</code>, dan{' '}
+                <code>CLOUDINARY_API_SECRET</code> di berkas <code>.env</code>, lalu mulai ulang
+                server. Langkahnya ada di <strong>README.md</strong> bagian 5.
+              </p>
+            </div>
+          ) : null}
 
           {sample ? (
             <div className="mt-3 border border-[var(--color-accent)] px-3 py-3">

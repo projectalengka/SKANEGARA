@@ -278,6 +278,25 @@ fungsi selesai berjalan.
 
 **Batas unggah:** 8 MB per berkas, format JPEG / PNG / WebP / AVIF.
 
+> **Kenapa angka 8 MB punya pasangan di `next.config.ts`.** Server Action
+> menolak badan permintaan di atas **1 MB** secara bawaan, dan penolakan itu
+> terjadi *sebelum* action dijalankan — jadi `content-actions.ts` tidak pernah
+> melihatnya dan tidak bisa melaporkannya. Selama nilainya dibiarkan bawaan,
+> setiap foto antara 1 MB dan 8 MB gagal tanpa pesan apa pun: kolom unggah
+> berhenti di "Mengunggah…" selamanya. Diukur 24 September 2026 dengan PNG
+> 1,5 MB: HTTP 500 dan `Body exceeded 1 MB limit.` yang tidak tertangkap.
+>
+> `next.config.ts` kini menyetel `experimental.serverActions.bodySizeLimit` ke
+> `9mb` — sengaja **di atas** 8 MB, karena yang dihitung adalah seluruh amplop
+> multipart (boundary, header bagian, nama berkas), bukan hanya isi berkasnya.
+> `tests/upload.test.ts` mengunci hubungan kedua angka itu supaya tidak bisa
+> lepas lagi.
+
+Kalau kredensial Cloudinary belum diisi, dasbor **mengatakannya sendiri**: ada
+pemberitahuan tetap di sidebar ("Unggah gambar belum aktif") dan barisnya di
+halaman **Pengaturan**. Kolom unggah tetap bisa diklik, tetapi akan menjawab
+dengan kalimat yang menjelaskan sebabnya, bukan diam.
+
 Setelah diunggah, dasbor menyimpan dua nilai: URL gambar dan *public ID*.
 Public ID dipakai untuk menghapus gambar dari Cloudinary saat item dihapus.
 Menghapus gambar bersifat **tidak fatal** — kalau Cloudinary sedang tidak bisa
@@ -604,31 +623,36 @@ elemen seperti yang dilakukan sekarang.
 ```
 src/
 ├── app/
-│   ├── layout.tsx                 kerangka global, metadata, font
-│   ├── page.tsx                   halaman depan (10 bagian)
-│   ├── tentang/                   profil sekolah
-│   ├── program-keahlian/          daftar + [slug] detail program
-│   ├── berita/                    arsip + [slug] artikel
-│   ├── galeri/                    galeri penuh
-│   ├── karya/                     karya siswa
-│   ├── kegiatan/                  agenda kegiatan
-│   ├── kontak/                    kontak + formulir
-│   ├── privasi/                   kebijakan privasi
+│   ├── layout.tsx                 kerangka akar: <html>, <body>, metadata, font
+│   ├── not-found.tsx              404 (di luar grup, jadi memakai SiteShell sendiri)
+│   ├── (situs)/                   GRUP RUTE SITUS PUBLIK — tidak muncul di URL
+│   │   ├── layout.tsx             memasang SiteShell
+│   │   ├── page.tsx               halaman depan (10 bagian)
+│   │   ├── tentang/               profil sekolah
+│   │   ├── program-keahlian/      daftar + [slug] detail program
+│   │   ├── berita/                arsip + [slug] artikel
+│   │   ├── galeri/                galeri penuh
+│   │   ├── karya/                 karya siswa
+│   │   ├── kegiatan/              agenda kegiatan
+│   │   ├── kontak/                kontak + formulir
+│   │   ├── privasi/               kebijakan privasi
+│   │   └── error.tsx, loading.tsx batas galat & status muat situs
 │   ├── admin/
 │   │   ├── masuk/                 halaman login (di luar grup terproteksi)
 │   │   ├── auth-actions.ts        login, logout
 │   │   ├── content-actions.ts     13 server action CRUD
 │   │   ├── tags.ts                tag cache + menu dasbor
+│   │   ├── error.tsx, loading.tsx batas galat & status muat dasbor
 │   │   └── (dasbor)/              SEMUA rute di sini dilindungi oleh layout
 │   ├── sitemap.ts, robots.ts      SEO
-│   └── not-found.tsx, error.tsx, loading.tsx
 ├── components/
+│   ├── shell/SiteShell.tsx        kerangka situs: header + footer + kursor
 │   ├── sections/                  bagian halaman
 │   ├── navigation/                header + menu seluler
 │   ├── footer/
 │   ├── motion/                    Lenis, observer, animasi hero
 │   ├── admin/                     kerangka dasbor + manajer konten
-│   └── ui/
+│   └── ui/                        RouteLoading, PageHero
 ├── data/defaults.ts               konten cadangan & tanda placeholder
 ├── lib/
 │   ├── db.ts                      klien Prisma + readOrFallback
@@ -636,6 +660,7 @@ src/
 │   ├── auth.ts                    scrypt, token sesi
 │   ├── session.ts                 cookie sesi
 │   ├── cloudinary.ts              unggah & hapus gambar
+│   ├── upload-limits.ts           aturan unggah, dibaca klien DAN server
 │   ├── animations.ts              GSAP: splitLines, reveal, parallax, hero
 │   ├── motion.ts                  konstanta durasi, breakpoint, easing
 │   └── utils.ts                   slugify, format tanggal, dsb.
@@ -646,10 +671,25 @@ src/
 └── generated/prisma/              hasil `prisma generate` — jangan disunting
 ```
 
-**Rute grup `(dasbor)`.** Tanda kurung membuat grup rute yang tidak muncul di
-URL. Karena `layout.tsx` di dalamnya memanggil `requireSession()`, setiap
-halaman di bawahnya terlindungi *secara struktural* — bukan karena tiap halaman
-kebetulan ingat memanggil pemeriksaan sesi.
+**Dua grup rute, dua kerangka.** `(situs)` dan `(dasbor)` sama-sama grup rute —
+tanda kurung membuatnya tidak muncul di URL. Yang membedakan keduanya adalah
+apa yang mereka pasang:
+
+- `(situs)` memasang `SiteShell` — header, footer, gulir halus, kursor kustom.
+- `(dasbor)` memasang `AdminShell` — sidebar, dan `requireSession()`.
+
+Keduanya **tidak boleh** berbagi kerangka, dan sampai 24 September 2026 keduanya
+berbagi: header dan footer dirender oleh `layout.tsx` akar, sehingga ikut terpasang
+di `/admin/*`. Karena header situs bersifat `fixed`, ia melayang di atas sidebar
+dasbor — terukur 2079 px² tumpang tindih antara merek sekolah dan judul sidebar,
+setiap halaman dasbor berisi **dua** elemen `<main>`, dan Lenis mengambil alih
+gulir di dalam CMS. Karena itu kerangka situs dipindahkan ke `(situs)`, dan
+`tests/upload.test.ts` memastikan ia tidak kembali ke akar.
+
+**Kenapa `requireSession()` ada di layout, bukan di tiap halaman.** Setiap
+halaman di bawah `(dasbor)` terlindungi *secara struktural*. Kegagalan karena
+lupa memanggil pemeriksaan sesi adalah rute terbuka, dan tidak ada yang
+menyadarinya sampai halaman itu terindeks.
 
 ---
 
@@ -845,6 +885,41 @@ ADMIN_EMAIL="admin@sekolah.sch.id" ADMIN_PASSWORD="kata-sandi" \
 > login akan gagal **dengan benar** (fail-closed) dan probe akan melaporkan
 > kegagalan — itu perilaku yang diinginkan, bukan bug.
 
+### Pemeriksaan khusus unggah gambar dan kerangka dasbor
+
+Dua probe ini ada karena laporan pemilik proyek pada 24 September 2026 ("belum
+bisa upload gambar"; tangkapan layar dasbor yang tumpang tindih). Keduanya
+mengukur angka, bukan kesan, dan sengaja dibuat supaya bisa dijalankan **sebelum
+dan sesudah** perbaikan lalu dibandingkan.
+
+```bash
+node --env-file=.env outputs/probe-upload.mjs        # TAG=before|after
+node --env-file=.env outputs/probe-admin-shell.mjs   # TAG=before|after
+```
+
+`probe-upload.mjs` mengunggah tiga berkas berukuran berbeda lewat kolom berkas
+yang sesungguhnya, lalu melaporkan pesan yang muncul dan permintaan POST yang
+terjadi. Yang membedakan sebab-sebabnya adalah ukurannya:
+
+| Berkas | Sebelum perbaikan | Sesudah perbaikan |
+| --- | --- | --- |
+| 200 KB | "Penyimpanan gambar belum dikonfigurasi…" (POST 200) | sama |
+| 1,5 MB | **macet di "Mengunggah…"**, POST 500, `Body exceeded 1 MB limit.` | "Penyimpanan gambar belum dikonfigurasi…" (POST 200) |
+| 9 MB | **macet di "Mengunggah…"**, POST 500 | "Ukuran gambar melebihi 8 MB.", **tanpa POST sama sekali** |
+
+`probe-admin-shell.mjs` mengukur jumlah `<main>`, keberadaan header/footer situs,
+kursor kustom, Lenis, dan **luas tumpang tindih** antara merek situs dan judul
+sidebar dalam piksel persegi:
+
+| | Sebelum | Sesudah |
+| --- | --- | --- |
+| `<main>` per halaman | 2 (`konten`, `dasbor-konten`) | 1 (`dasbor-konten`) |
+| Header situs publik | ada (6 tautan nav) | tidak ada |
+| Footer situs publik | ada | tidak ada |
+| Kursor kustom | ada | tidak ada |
+| Lenis mengambil alih gulir | ya | tidak |
+| Tumpang tindih merek × judul | **2079 px²** | 0 |
+
 ---
 
 ## 13. Pemecahan Masalah
@@ -920,17 +995,51 @@ Turunkan `max` di `src/lib/db.ts` (sekarang `5`), atau pastikan
 
 ### Unggah gambar gagal
 
-1. Periksa ketiga variabel `CLOUDINARY_*` sudah terisi.
-2. Pastikan berkas di bawah 8 MB dan formatnya JPEG / PNG / WebP / AVIF.
-3. Kalau unggah berhasil tapi gambar tidak tampil, periksa
-   `next.config.ts` → `images.remotePatterns` sudah memuat
+Ada dua sebab yang berbeda, dan gejalanya sengaja dibedakan supaya bisa
+dipisahkan tanpa membuka log:
+
+| Yang Anda lihat | Sebabnya | Tindakan |
+| --- | --- | --- |
+| "Penyimpanan gambar belum dikonfigurasi…" | Kredensial Cloudinary kosong | Isi ketiga `CLOUDINARY_*`, mulai ulang server |
+| "Ukuran gambar melebihi 8 MB." | Berkas terlalu besar — ditolak di peramban, **tidak dikirim** | Perkecil gambarnya |
+| "Format gambar harus JPG, PNG, WebP, atau AVIF." | Tipe berkas di luar daftar | Ubah formatnya |
+| "Gambar gagal diunggah. Periksa koneksi Anda…" | Permintaan gagal di jalan, sebelum action berjalan | Coba lagi; kalau tetap, periksa log server |
+
+Pemberitahuan "Unggah gambar belum aktif" di sidebar menandakan baris pertama
+bahkan sebelum Anda mencoba mengunggah.
+
+Kalau unggahan **berhasil** tetapi gambarnya tidak tampil:
+
+1. Pastikan itemnya diterbitkan — kotak "Tampilkan di galeri" harus tercentang.
+2. Ingat bahwa halaman depan hanya memuat **6 foto pertama**, diurutkan dari
+   angka Urutan terkecil. Beri angka kecil (misalnya `0` atau `1`) agar foto
+   baru langsung terlihat di beranda.
+3. Periksa `next.config.ts` → `images.remotePatterns` sudah memuat
    `res.cloudinary.com`.
 
 ### Perubahan dari admin tidak muncul di situs
 
-Tunggu beberapa detik — `revalidatePath()` berjalan setelah aksi selesai.
-Kalau tetap tidak muncul, lakukan *hard refresh*. Perubahan **tidak** butuh
-redeploy.
+Kalau ini terjadi, **jangan** mulai dari `revalidateTag`. Diukur 24 September
+2026, mekanisme yang benar-benar menjaga situs tetap segar adalah
+`dynamic = 'force-dynamic'` di `src/app/layout.tsx`: setiap halaman dirender
+ulang tiap permintaan, dengan header
+`Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate`. Tidak
+ada cache halaman, dan tidak ada cache data bertag — `src/lib/db.ts` membaca
+Prisma secara langsung, dan `cacheTag` tidak dipanggil di mana pun.
+
+Artinya:
+
+1. Perubahan **tidak** butuh redeploy, dan tidak perlu menunggu — cukup muat
+   ulang halaman. Kalau masih lama, lakukan *hard refresh* (Ctrl+Shift+R) untuk
+   membersihkan cache peramban.
+2. Kalau perubahan tetap tidak muncul, sebabnya hampir selalu data: barisnya
+   belum tersimpan, kolom **Tampilkan/terbitkan** belum dicentang, atau angkanya
+   mengurutkannya ke luar batas yang ditampilkan (beranda hanya memuat 6 foto
+   dan 4 berita teratas).
+3. Kalau suatu saat halaman publik dibuat statis demi kecepatan, hapus dulu
+   ketergantungan pada `force-dynamic` dengan memasang `unstable_cache` +
+   `cacheTag` di `src/lib/content.ts`. Tanpa itu, menyetel halaman menjadi statis
+   akan membuat perubahan dari dasbor berhenti muncul tanpa galat apa pun.
 
 ### Halaman tampil tanpa gambar sama sekali
 

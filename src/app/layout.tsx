@@ -1,21 +1,24 @@
 import type { Metadata, Viewport } from 'next';
 import { siteUrl } from '@/lib/utils';
-import { SmoothScroll } from '@/components/motion/SmoothScroll';
-import { RevealObserver } from '@/components/motion/RevealObserver';
-import { CustomCursor } from '@/components/motion/CustomCursor';
-import { SiteHeader } from '@/components/navigation/SiteHeader';
-import { SiteFooter } from '@/components/footer/SiteFooter';
 import { getSchoolProfile } from '@/lib/content';
 import '@/styles/global.css';
 
 /**
  * The root layout.
  *
- * Server-rendered by default. Only three things below this line are client
- * components, and each one has to be: smooth scroll owns a global scroll
- * instance, the reveal observer owns an IntersectionObserver, and the header
- * owns menu state. Everything else — every section, every page — is a server
- * component, which is what keeps the bundle honest.
+ * It renders `<html>`, `<body>`, the document metadata and the stylesheet — and
+ * nothing else. Next.js allows exactly one root layout and it wraps *every*
+ * route, so anything put here is imposed on the dashboard as well as on the
+ * site. The site's own frame (header, footer, smooth scroll, custom pointer)
+ * therefore lives in `src/app/(situs)/layout.tsx`, and the dashboard's in
+ * `src/app/admin/(dasbor)/layout.tsx`.
+ *
+ * That split is not cosmetic. Until 2026-09-24 the header and footer were
+ * rendered here, so `/admin/*` inherited them: the fixed site header floated
+ * over the sidebar, the public navigation crossed the dashboard's page title,
+ * the custom cursor drew a dot in the middle of a form, and every dashboard page
+ * contained two `<main>` elements. See `src/components/shell/SiteShell.tsx` for
+ * the measurements.
  */
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -78,9 +81,7 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const profile = await getSchoolProfile();
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     /*
       `className="js"` is rendered by the *server*, not added by a script.
@@ -127,8 +128,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           type="font/woff2"
           crossOrigin="anonymous"
         />
-        {/* Reveal components opt in only after their observers are ready.
-            A blocked client bundle therefore leaves the server content visible. */}
 
         {/*
           Mark the document as script-capable before paint.
@@ -155,17 +154,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           }}
         />
       </head>
-      <body>
-        <a className="skip-link" href="#konten">
-          Lompat ke konten utama
-        </a>
-        <SmoothScroll />
-        <RevealObserver />
-        <CustomCursor />
-        <SiteHeader schoolName={profile.schoolName} />
-        <main id="konten" tabIndex={-1}>{children}</main>
-        <SiteFooter profile={profile} />
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
@@ -173,9 +162,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 /**
  * The layout is dynamic rather than static.
  *
- * The header renders differently depending on whether an admin session cookie
- * is present, and the content layer falls back to seed data when the database
- * is unreachable. Both of those are per-request facts, so caching the shell
- * statically would serve one visitor's state to another.
+ * The content layer falls back to seed data when the database is unreachable,
+ * and that is a per-request fact: caching the shell statically would serve one
+ * visitor's state to another.
  */
 export const dynamic = 'force-dynamic';

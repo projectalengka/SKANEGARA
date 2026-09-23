@@ -200,7 +200,17 @@ function mergeProfile(
   };
 }
 
-/** The site's cache tags. Grouped here so `revalidateTag` and `cacheTag` cannot drift. */
+/**
+ * The site's cache tags, used by `revalidateTag` after a content write.
+ *
+ * Note (measured 2026-09-24): nothing applies these tags. `cacheTag` appears
+ * nowhere in `src/`, and `readOrFallback` in `src/lib/db.ts` queries Prisma
+ * directly, so there is no tagged data cache for `revalidateTag` to invalidate.
+ * Edits appear on the public site because every page is dynamic
+ * (`dynamic = 'force-dynamic'` in the root layout), not because of these tags.
+ * They are kept so that the names cannot drift from `mainTags` in
+ * `src/app/admin/tags.ts` if a tagged cache is added later.
+ */
 export const tags = {
   profile: 'profil',
   programs: 'program',

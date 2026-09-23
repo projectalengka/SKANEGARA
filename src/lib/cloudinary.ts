@@ -1,4 +1,5 @@
 import { v2 as cloudinary } from 'cloudinary';
+import { uploadError } from './upload-limits';
 
 /**
  * Cloudinary image storage.
@@ -57,21 +58,17 @@ function configure(): CloudinaryConfig | null {
 
 export type UploadResult = { url: string; publicId: string; width: number; height: number };
 
-/** What the upload endpoint is allowed to accept. */
-export const UPLOAD_LIMITS = {
-  maxBytes: 8 * 1024 * 1024,
-  mimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/avif'] as const,
-} as const;
-
 /**
  * Uploads a buffer to Cloudinary.
  *
  * Two things this does beyond calling the SDK:
  *
- *  - **It validates the MIME type and size against an allow-list.** A browser's
- *    `accept` attribute is a convenience for the user, not a control; the same
- *    request can be made with `curl`. And a size cap matters because Cloudinary
- *    bills for it and Vercel caps request bodies.
+ *  - **It validates the MIME type and size against an allow-list**, using the
+ *    same rules the browser applies before sending — see
+ *    `src/lib/upload-limits.ts`. A browser's `accept` attribute is a convenience
+ *    for the user, not a control; the same request can be made with `curl`. And
+ *    a size cap matters because Cloudinary bills for it and Vercel caps request
+ *    bodies.
  *  - **It uploads from a buffer, not a path.** There is no temporary file
  *    anywhere, so there is nothing to clean up and nothing that can leak between
  *    requests on a shared lambda.
@@ -88,17 +85,10 @@ export async function uploadImage(
     };
   }
 
-  if (file.size === 0) {
-    return { ok: false, error: 'Berkas kosong.' };
-  }
-
-  if (file.size > UPLOAD_LIMITS.maxBytes) {
-    return { ok: false, error: 'Ukuran gambar melebihi 8 MB.' };
-  }
-
-  if (!UPLOAD_LIMITS.mimeTypes.includes(file.type as (typeof UPLOAD_LIMITS.mimeTypes)[number])) {
-    return { ok: false, error: 'Format gambar harus JPG, PNG, WebP, atau AVIF.' };
-  }
+  // The wording comes from the shared module, so the message the browser shows
+  // before sending is the same one the server would have returned.
+  const problem = uploadError(file);
+  if (problem) return { ok: false, error: problem };
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer());

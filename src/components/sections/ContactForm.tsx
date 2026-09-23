@@ -2,7 +2,9 @@
 
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
-import { submitContact, type ContactState } from '@/app/kontak/actions';
+// The route group's parentheses are part of the path: `kontak` now lives at
+// `src/app/(situs)/kontak/actions.ts`.
+import { submitContact, type ContactState } from '@/app/(situs)/kontak/actions';
 
 /**
  * The public contact form.

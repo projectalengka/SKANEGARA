@@ -81,6 +81,22 @@ async function guard(): Promise<{ ok: true } | { ok: false; result: ActionResult
  * `'max'` is passed as the profile because this Next.js version takes a cache
  * profile as the second argument. It means "expire this data everywhere",
  * which is exactly the intent after a content write.
+ *
+ * ## Measured reality, 2026-09-24
+ *
+ * Only the second mechanism is currently doing work. Nothing in `src/` calls
+ * `cacheTag` or `unstable_cache` — `src/lib/db.ts` queries Prisma directly — so
+ * there is no tagged data cache for `revalidateTag` to clear, and the calls
+ * above are a no-op. What actually makes an edit visible is that every public
+ * page is dynamic: `dynamic = 'force-dynamic'` in `src/app/layout.tsx`, confirmed
+ * by the `Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate`
+ * header on `/` and `/tentang`.
+ *
+ * The calls stay, because they are the correct thing to do the moment a tagged
+ * cache is introduced, and because `revalidatePath` does still clear the client
+ * router cache. But anyone tempted to make the public pages static for speed
+ * should read this first: doing so would remove the only thing keeping edits
+ * live, and the symptom would be "changes from the admin do not appear".
  */
 function revalidateContent(...tags: string[]): void {
   for (const tag of tags) {

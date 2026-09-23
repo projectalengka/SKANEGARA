@@ -36,10 +36,22 @@ export const metadata: Metadata = {
 };
 
 /**
- * Cached and revalidated by tag rather than rebuilt on every request. When the
- * administrator saves a news article, the server action calls `revalidateTag`
- * for `berita` and this page is regenerated in the background — which is what
- * lets the CMS work without a redeploy.
+ * Rendered on demand, not from a stored copy.
+ *
+ * This used to say the page was "cached and revalidated by tag", with
+ * `revalidate = 300` below it. That is not what happens, and the header proves
+ * it: the response carries
+ * `Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate`,
+ * because `dynamic = 'force-dynamic'` in `src/app/layout.tsx` applies to every
+ * segment beneath it. The `revalidate` value is therefore inert — the page is
+ * built per request.
+ *
+ * That is why an edit in the dashboard appears immediately: there is no stored
+ * page to go stale, and no tagged data cache either (`src/lib/db.ts` reads
+ * through Prisma directly; nothing in `src/` calls `cacheTag`). It also means
+ * `revalidateTag` in `src/app/admin/content-actions.ts` currently has nothing to
+ * invalidate. Both facts are worth knowing before anyone makes this page static
+ * for speed: doing so would silently stop edits from appearing.
  */
 export const revalidate = 300;
 
