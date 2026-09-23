@@ -70,7 +70,7 @@ export default async function HomePage() {
 
   return (
     <>
-      {hero ? <Hero profile={profile} section={hero} /> : null}
+      {hero ? <Hero profile={profile} section={hero} programs={programs} /> : null}
       <OrientationStrip profile={profile} />
       {introduction ? <Introduction section={introduction} /> : null}
       {about ? <About profile={profile} section={about} /> : null}

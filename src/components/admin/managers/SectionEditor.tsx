@@ -79,9 +79,9 @@ export function SectionEditor({ sections }: { sections: SectionContent[] }) {
             className="border border-[var(--color-line)] bg-[var(--color-paper)] px-6 py-6"
           >
             <header className="border-b border-[var(--color-line)] pb-5">
-              <h2 className="display text-[1.35rem]">{meta.title}</h2>
+              <h2 className="display text-[length:var(--step-3)]">{meta.title}</h2>
               {meta.description ? (
-                <p className="mt-2 text-[0.9375rem] text-[var(--color-text-muted)]">{meta.description}</p>
+                <p className="mt-2 text-[length:var(--step-0)] text-[var(--color-text-muted)]">{meta.description}</p>
               ) : null}
               <p className="label mt-3 text-[var(--color-text-faint)]">Kunci: {section.key}</p>
             </header>

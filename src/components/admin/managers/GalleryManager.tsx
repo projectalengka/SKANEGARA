@@ -76,8 +76,8 @@ export function GalleryManager({ items }: { items: GalleryContent[] }) {
 
       {creating ? (
         <div className="mb-8 border border-[var(--color-ink)] bg-[var(--color-paper)] px-6 py-7">
-          <h2 className="display text-[1.5rem]">Foto Baru</h2>
-          <p className="mt-2 text-[0.9375rem] text-[var(--color-text-muted)]">
+          <h2 className="display text-[length:var(--step-3)]">Foto Baru</h2>
+          <p className="mt-2 text-[length:var(--step-0)] text-[var(--color-text-muted)]">
             Unggah gambar, isi judul dan keterangannya, lalu simpan.
           </p>
 
@@ -124,7 +124,7 @@ export function GalleryManager({ items }: { items: GalleryContent[] }) {
                   </div>
 
                   <div className="px-4 py-4">
-                    <p className="truncate text-[0.9375rem]">{item.title}</p>
+                    <p className="truncate text-[length:var(--step-0)]">{item.title}</p>
                     <p className="label mt-1.5 text-[var(--color-text-faint)]">{item.category}</p>
 
                     <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -162,7 +162,7 @@ export function GalleryManager({ items }: { items: GalleryContent[] }) {
             })}
           </ul>
 
-          <p className="mt-6 text-[0.9375rem] text-[var(--color-text-muted)]">
+          <p className="mt-6 text-[length:var(--step-0)] text-[var(--color-text-muted)]">
             Urutan tampil mengikuti angka pada kolom Urutan. Angka kecil tampil lebih dahulu.
           </p>
         </>

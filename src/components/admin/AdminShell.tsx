@@ -21,10 +21,34 @@ import { cn } from '@/lib/utils';
 export function AdminShell({
   email,
   mode,
+  schoolName,
+  sample,
+  sampleRaw,
   children,
 }: {
   email: string;
   mode: 'database' | 'seed';
+  /** From the content layer, not a literal — the profile is editable. */
+  schoolName: string;
+  /**
+   * Whether `[CONTOH]` placeholder content is being served publicly.
+   *
+   * Surfaced here rather than left to the owner to remember. A switch that
+   * changes what the public site shows, without saying so anywhere, is a trap:
+   * the administrator would see `[CONTOH]` articles in the dashboard and have
+   * no way to tell whether visitors see them too.
+   */
+  sample: boolean;
+  /**
+   * The raw `SAMPLE_DATA` value this process actually saw, verbatim.
+   *
+   * Present so the dashboard can tell "deliberately off" apart from "set to
+   * something unrecognised". During the audit those two states were
+   * indistinguishable from the outside — `.env` said `on`, the site was empty,
+   * and nothing explained why. Passing the raw string up means a typo is
+   * visible in the UI instead of being silently treated as off.
+   */
+  sampleRaw?: string;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -42,7 +66,7 @@ export function AdminShell({
       <div className="flex items-center justify-between border-b border-[var(--color-line)] bg-[var(--color-paper)] px-5 py-4 lg:hidden">
         <Link href="/admin/dasbor" className="flex items-center gap-3">
           <span className="h-2 w-2 bg-[var(--color-accent)]" aria-hidden="true" />
-          <span className="display text-[1.15rem]">Dasbor</span>
+          <span className="display text-[length:var(--step-2)]">Dasbor</span>
         </Link>
         <button
           type="button"
@@ -65,8 +89,8 @@ export function AdminShell({
         <div className="hidden items-center gap-3 border-b border-[var(--color-line)] px-6 py-6 lg:flex">
           <span className="h-2.5 w-2.5 bg-[var(--color-accent)]" aria-hidden="true" />
           <div className="leading-none">
-            <p className="label text-[var(--color-text-muted)]">SMK Jayanegara</p>
-            <p className="display mt-1.5 text-[1.2rem]">Dasbor</p>
+            <p className="label text-[var(--color-text-muted)]">{schoolName}</p>
+            <p className="display mt-1.5 text-[length:var(--step-2)]">Dasbor</p>
           </div>
         </div>
 
@@ -82,7 +106,7 @@ export function AdminShell({
                       aria-current={isActive(item.href) ? 'page' : undefined}
                       onClick={() => setOpen(false)}
                       className={cn(
-                        'block px-3 py-2.5 text-[0.9375rem] transition-colors duration-300',
+                        'block px-3 py-2.5 text-[length:var(--step-0)] transition-colors duration-300',
                         isActive(item.href)
                           ? 'bg-[var(--color-ink)] text-[var(--color-paper)]'
                           : 'text-[var(--color-text-muted)] hover:bg-[var(--color-paper-warm)] hover:text-[var(--color-text)]',
@@ -99,7 +123,7 @@ export function AdminShell({
 
         <div className="border-t border-[var(--color-line)] px-6 py-5">
           <p className="label text-[var(--color-text-faint)]">Masuk sebagai</p>
-          <p className="mt-2 truncate text-[0.875rem]">{email}</p>
+          <p className="mt-2 truncate text-[length:var(--step-0)]">{email}</p>
 
           <p className="mt-4">
             <span
@@ -115,12 +139,39 @@ export function AdminShell({
             </span>
           </p>
 
+          {sample ? (
+            <div className="mt-3 border border-[var(--color-accent)] px-3 py-3">
+              <p className="label text-[var(--color-accent-deep)]">Mode contoh aktif</p>
+              <p className="mt-2 text-[length:var(--step--1)] text-[var(--color-text-muted)]">
+                Pengunjung melihat data bertanda <strong>[CONTOH]</strong>. Matikan dengan menghapus{' '}
+                <code>SAMPLE_DATA</code> dari berkas <code>.env</code>, lalu mulai ulang server.
+              </p>
+            </div>
+          ) : null}
+
+          {/*
+            The other half of the switch: set, but not recognised by this
+            process. Without this branch the two states are indistinguishable
+            from a page — the site is simply empty either way — and the owner is
+            left guessing whether they typed it wrong or the server is stale.
+          */}
+          {!sample && sampleRaw !== undefined ? (
+            <div className="mt-3 border border-[var(--color-line)] px-3 py-3">
+              <p className="label text-[var(--color-text-muted)]">SAMPLE_DATA tidak dikenali</p>
+              <p className="mt-2 text-[length:var(--step--1)] text-[var(--color-text-muted)]">
+                Nilainya terbaca <code>{JSON.stringify(sampleRaw)}</code>, jadi situs memakai
+                keadaan kosong. Yang dikenali hanya <code>on</code>, <code>true</code>, atau{' '}
+                <code>1</code>. Perbaiki nilainya, lalu mulai ulang server.
+              </p>
+            </div>
+          ) : null}
+
           <div className="mt-5 flex flex-col gap-2">
-            <Link href="/" className="link-line text-[0.875rem]">
+            <Link href="/" className="link-line text-[length:var(--step-0)]">
               Lihat situs →
             </Link>
             <form action={logout}>
-              <button type="submit" className="link-line text-[0.875rem]">
+              <button type="submit" className="link-line text-[length:var(--step-0)]">
                 Keluar
               </button>
             </form>
@@ -141,23 +192,41 @@ export function AdminShell({
  * The action slot sits opposite the title so a "Tambah" button is always in the
  * same place on every screen — a CMS where the primary action moves is a CMS
  * people misclick.
+ *
+ * `level` exists because `/admin/profil` renders two of these on one page: the
+ * page title and the programmes block beneath it. Both used to emit an `<h1>`,
+ * which gives the document two top-level headings and leaves a screen reader
+ * user with no idea which one the page is about. The first heading on a page is
+ * `1`; anything nested under it passes `level={2}`.
  */
 export function AdminHeading({
   eyebrow,
   title,
   description,
   action,
+  level = 1,
 }: {
   eyebrow?: string;
   title: string;
   description?: string;
   action?: React.ReactNode;
+  level?: 1 | 2;
 }) {
+  const Heading = level === 1 ? 'h1' : 'h2';
+
   return (
     <header className="mb-9 flex flex-col gap-5 border-b border-[var(--color-line)] pb-7 sm:flex-row sm:items-end sm:justify-between">
       <div>
         {eyebrow ? <p className="label text-[var(--color-accent)]">{eyebrow}</p> : null}
-        <h1 className="display mt-3 text-[clamp(1.75rem,5vw,2.75rem)] leading-[0.95]">{title}</h1>
+        <Heading
+          className={
+            level === 1
+              ? 'display mt-3 text-[length:var(--step-5)] leading-[0.95]'
+              : 'display mt-3 text-[length:var(--step-4)] leading-[0.95]'
+          }
+        >
+          {title}
+        </Heading>
         {description ? (
           <p className="mt-3 max-w-2xl text-[var(--color-text-muted)]">{description}</p>
         ) : null}
@@ -183,8 +252,8 @@ export function AdminPanel({
     <section className="border border-[var(--color-line)] bg-[var(--color-paper)]">
       {title ? (
         <header className="border-b border-[var(--color-line)] px-6 py-5">
-          <h2 className="display text-[1.35rem]">{title}</h2>
-          {description ? <p className="mt-2 text-[0.9375rem] text-[var(--color-text-muted)]">{description}</p> : null}
+          <h2 className="display text-[length:var(--step-3)]">{title}</h2>
+          {description ? <p className="mt-2 text-[length:var(--step-0)] text-[var(--color-text-muted)]">{description}</p> : null}
         </header>
       ) : null}
 

@@ -82,7 +82,7 @@ export default async function ProgramDetailPage({
               <h2 className="label text-[var(--color-text-muted)]">Tentang Program</h2>
             </div>
             <div className="lg:col-span-9">
-              <p className="prose-body !text-[1.25rem] !text-[var(--color-text)]">
+              <p className="prose-body !text-[length:var(--step-2)] !text-[var(--color-text)]">
                 {program.description}
               </p>
 
@@ -119,7 +119,7 @@ export default async function ProgramDetailPage({
                       <span className="label text-[var(--color-text-muted)]">
                         {String(index + 1).padStart(2, '0')}
                       </span>
-                      <span className="display text-[clamp(1.5rem,4vw,2.5rem)] transition-transform duration-700 group-hover:translate-x-2">
+                      <span className="display text-[length:var(--step-4)] transition-transform duration-700 group-hover:translate-x-2">
                         {item.name}
                       </span>
                     </span>

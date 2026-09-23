@@ -83,12 +83,12 @@ export default async function AdminSettingsPage() {
                     />
                     {check.label}
                   </p>
-                  <p className="mt-2 pl-5 text-[0.9375rem] text-[var(--color-text-muted)]">
+                  <p className="mt-2 pl-5 text-[length:var(--step-0)] text-[var(--color-text-muted)]">
                     {check.configured ? check.okMessage : check.failMessage}
                   </p>
 
                   {!check.configured ? (
-                    <ul className="mt-3 flex flex-col gap-1 pl-5 font-[family-name:var(--font-mono)] text-[0.75rem] text-[var(--color-text-faint)]">
+                    <ul className="mt-3 flex flex-col gap-1 pl-5 font-[family-name:var(--font-mono)] text-[length:var(--step--1)] text-[var(--color-text-faint)]">
                       {check.env.map((name) => (
                         <li key={name}>{name}</li>
                       ))}
@@ -110,7 +110,7 @@ export default async function AdminSettingsPage() {
           </ul>
         </AdminPanel>
 
-        <AdminPanel title="SEO &amp; Metadata">
+        <AdminPanel title="SEO & Metadata">
           <dl className="flex flex-col gap-5">
             <div>
               <dt className="label text-[var(--color-text-muted)]">Judul Situs</dt>
@@ -125,7 +125,7 @@ export default async function AdminSettingsPage() {
             <div>
               <dt className="label text-[var(--color-text-muted)]">Peta Situs</dt>
               <dd className="mt-2">
-                <a href="/sitemap.xml" className="link-line font-[family-name:var(--font-mono)] text-[0.875rem]">
+                <a href="/sitemap.xml" className="link-line font-[family-name:var(--font-mono)] text-[length:var(--step-0)]">
                   /sitemap.xml
                 </a>
               </dd>
@@ -133,14 +133,14 @@ export default async function AdminSettingsPage() {
             <div>
               <dt className="label text-[var(--color-text-muted)]">Berkas robots</dt>
               <dd className="mt-2">
-                <a href="/robots.txt" className="link-line font-[family-name:var(--font-mono)] text-[0.875rem]">
+                <a href="/robots.txt" className="link-line font-[family-name:var(--font-mono)] text-[length:var(--step-0)]">
                   /robots.txt
                 </a>
               </dd>
             </div>
           </dl>
 
-          <p className="mt-6 border-t border-[var(--color-line)] pt-5 text-[0.9375rem] text-[var(--color-text-muted)]">
+          <p className="mt-6 border-t border-[var(--color-line)] pt-5 text-[length:var(--step-0)] text-[var(--color-text-muted)]">
             Judul dan deskripsi diambil dari halaman <strong>Profil Sekolah</strong>. Ubah di sana
             agar meta description dan hasil pencarian ikut berubah.
           </p>

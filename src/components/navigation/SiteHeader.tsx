@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { primaryNav } from '@/data/defaults';
+import { lockPageScroll } from '@/lib/scroll-lock';
 import { cn } from '@/lib/utils';
 
 /**
@@ -14,16 +15,31 @@ import { cn } from '@/lib/utils';
  * reason the hero reads as full-bleed; the moment the bar gets a background the
  * hero becomes a panel below a toolbar.
  *
- * Mobile is a fullscreen overlay with a staggered list. Three details that make
- * it feel deliberate rather than default:
+ * ## Theme
  *
- *  - The overlay is a real `<dialog>`-less overlay but marks `aria-modal` and
- *    traps focus, because a menu you can tab behind is a menu that looks broken
- *    to a keyboard user.
- *  - `body` scroll is locked while open. On iOS that needs `position: fixed`
- *    rather than `overflow: hidden`, which is why the scroll position is stored
- *    and restored.
- *  - Escape closes it, and it closes on route change.
+ * The bar carries `data-on-dark`, which is true only on the home page, only
+ * before it has scrolled, and only while the overlay is closed — the three
+ * conditions under which it is genuinely sitting on the dark hero. The colours
+ * themselves are descendant tokens owned by `.site-header` in the stylesheet;
+ * this component only states *when* the dark theme applies. Every other route
+ * keeps the white bar, because the flag is never set there.
+ *
+ * ## Mobile overlay
+ *
+ * Three details that make it feel deliberate rather than default:
+ *
+ *  - The overlay traps keyboard focus between the toggle and the links inside
+ *    it, and moves focus to the first link on open. A menu you can tab behind
+ *    is a menu that looks broken to a keyboard user.
+ *  - `main` and `footer` are marked `inert` while it is open, so a screen reader
+ *    cannot wander back into the page underneath. The previous values are
+ *    captured and restored rather than assumed to be `false`.
+ *  - Escape closes it, links close it (including a link to the current route,
+ *    where the pathname never changes), and it closes when the viewport grows
+ *    past the breakpoint.
+ *
+ * `lockPageScroll` owns the scroll lock — on iOS that needs `position: fixed`
+ * rather than `overflow: hidden`, and the offset has to be stored and restored.
  */
 export function SiteHeader({ schoolName }: { schoolName: string }) {
   const pathname = usePathname();
@@ -46,6 +62,11 @@ export function SiteHeader({ schoolName }: { schoolName: string }) {
   const [openedOn, setOpenedOn] = useState(pathname);
   const menuOpen = open && openedOn === pathname;
 
+  // The dark theme is true only where the hero is dark: the home page, before
+  // the bar has gained its own background, and while the overlay is not
+  // covering it. The stylesheet keys off this attribute.
+  const onDark = pathname === '/' && !scrolled && !menuOpen;
+
   const setMenu = (next: boolean) => {
     setOpen(next);
     if (next) setOpenedOn(pathname);
@@ -61,42 +82,90 @@ export function SiteHeader({ schoolName }: { schoolName: string }) {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Escape to close, and focus restore. Returning focus to the toggle is what
-  // makes the interaction reversible for a keyboard user — otherwise focus falls
-  // to the top of the document and they have to tab back through the whole page.
+  // Everything the overlay owns while it is open: scroll lock, focus, the trap,
+  // Escape, the short-screen close, and the `inert` curtain over the page
+  // behind it. One effect, because they all share the same lifetime.
   useEffect(() => {
     if (!menuOpen) return;
+
+    const unlock = lockPageScroll();
+
+    const panel = panelRef.current;
+    const toggle = toggleRef.current;
+
+    // The cycle is the toggle plus everything focusable inside the panel. The
+    // toggle comes first in DOM order, so tabbing forward off the last link
+    // wraps to the toggle and shift-tabbing off the toggle wraps to the last
+    // link.
+    const focusable = (): HTMLElement[] => {
+      const inside = panel
+        ? Array.from(panel.querySelectorAll<HTMLElement>('a[href], button:not([disabled])'))
+        : [];
+      return [toggle, ...inside].filter((node): node is HTMLElement => node !== null);
+    };
+
+    // Focus the first link rather than the toggle: the menu is the thing that
+    // just opened, so focus belongs inside it.
+    panel?.querySelector<HTMLElement>('a[href], button:not([disabled])')?.focus();
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        event.preventDefault();
         setOpen(false);
-        toggleRef.current?.focus();
+        toggle?.focus();
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+
+      const nodes = focusable();
+      if (nodes.length === 0) return;
+
+      // `noUncheckedIndexedAccess` is not enabled in this project, but the two
+      // ends are still read defensively: `focusable()` builds the array from a
+      // DOM query, so an empty list is a real runtime possibility and a bare
+      // `nodes[0].focus()` would be a crash rather than a no-op.
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      if (!first || !last) return;
+
+      const active = document.activeElement as HTMLElement | null;
+      const outside = !active || !nodes.includes(active);
+
+      if (event.shiftKey && (active === first || outside)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || outside)) {
+        event.preventDefault();
+        first.focus();
       }
     };
 
+    // The overlay only exists below `lg`. Growing past it while the menu is
+    // open would leave a fullscreen panel on a desktop layout, so close.
+    const onResize = () => {
+      if (window.innerWidth >= 1024) setOpen(false);
+    };
+
+    // Capture the previous `inert` values instead of assuming `false`: the
+    // element may already have been inert for a reason of its own, and the
+    // cleanup must not silently un-inert it.
+    const behind: Array<[HTMLElement, boolean]> = [];
+    for (const node of [document.getElementById('konten'), document.querySelector('footer')]) {
+      if (node instanceof HTMLElement) {
+        behind.push([node, node.inert]);
+        node.inert = true;
+      }
+    }
+
     document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [menuOpen]);
-
-  // Scroll lock. Storing and restoring the offset is the part people skip, and
-  // it is why a modal on iOS often drops the visitor back to the top of the page
-  // when it closes.
-  useEffect(() => {
-    if (!menuOpen) return;
-
-    const offset = window.scrollY;
-    const { style } = document.body;
-    const previous = { position: style.position, top: style.top, width: style.width };
-
-    style.position = 'fixed';
-    style.top = `-${offset}px`;
-    style.width = '100%';
+    window.addEventListener('resize', onResize);
 
     return () => {
-      style.position = previous.position;
-      style.top = previous.top;
-      style.width = previous.width;
-      window.scrollTo(0, offset);
+      document.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('resize', onResize);
+      for (const [node, value] of behind) node.inert = value;
+      unlock();
     };
   }, [menuOpen]);
 
@@ -107,11 +176,12 @@ export function SiteHeader({ schoolName }: { schoolName: string }) {
     <>
       <header
         className={cn(
-          'fixed inset-x-0 top-0 z-50 transition-[background-color,border-color,backdrop-filter] duration-500',
+          'site-header fixed inset-x-0 top-0 z-50 transition-[background-color,border-color,backdrop-filter] duration-500',
           scrolled || menuOpen
             ? 'border-b border-[var(--color-line)] bg-[color-mix(in_srgb,var(--color-paper)_88%,transparent)] backdrop-blur-md'
             : 'border-b border-transparent bg-transparent',
         )}
+        data-on-dark={onDark}
         style={{ transitionTimingFunction: 'var(--ease-out)' }}
       >
         <div className="shell flex h-[var(--nav-h)] items-center justify-between gap-6">
@@ -128,13 +198,13 @@ export function SiteHeader({ schoolName }: { schoolName: string }) {
             />
             <span className="flex flex-col leading-none">
               <span className="label text-[var(--color-text-muted)]">SMK</span>
-              <span className="display text-[1.15rem] leading-none tracking-tight sm:text-[1.35rem]">
+              <span className="display text-[length:var(--step-2)] leading-none tracking-tight">
                 {schoolName.replace(/^SMK\s+/i, '')}
               </span>
             </span>
           </Link>
 
-          <nav aria-label="Navigasi utama" className="hidden lg:block">
+          <nav aria-label="Navigasi utama" className="hidden lg:block" data-hero="nav">
             <ul className="flex items-center gap-1">
               {primaryNav.map((item) => (
                 <li key={item.href}>
@@ -142,7 +212,7 @@ export function SiteHeader({ schoolName }: { schoolName: string }) {
                     href={item.href}
                     aria-current={isActive(item.href) ? 'page' : undefined}
                     className={cn(
-                      'group relative block px-3 py-2 font-[family-name:var(--font-mono)] text-[0.6875rem] uppercase tracking-[0.12em] transition-colors duration-300',
+                      'group relative block px-3 py-2 font-[family-name:var(--font-mono)] text-[length:var(--step--2)] uppercase tracking-[0.12em] transition-colors duration-300',
                       isActive(item.href)
                         ? 'text-[var(--color-text)]'
                         : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]',
@@ -163,7 +233,7 @@ export function SiteHeader({ schoolName }: { schoolName: string }) {
             </ul>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3" data-hero="nav">
             <Link href="/kontak" className="btn btn--solid hidden !px-4 !py-2.5 sm:inline-flex">
               Hubungi Kami
               <span className="btn__arrow" aria-hidden="true">
@@ -177,7 +247,7 @@ export function SiteHeader({ schoolName }: { schoolName: string }) {
               onClick={() => setMenu(!menuOpen)}
               aria-expanded={menuOpen}
               aria-controls="menu-seluler"
-              className="relative flex h-10 w-10 items-center justify-center lg:hidden"
+              className="relative flex h-11 w-11 items-center justify-center lg:hidden"
             >
               <span className="sr-only">{menuOpen ? 'Tutup menu' : 'Buka menu'}</span>
               <span aria-hidden="true" className="relative block h-3 w-6">
@@ -203,15 +273,18 @@ export function SiteHeader({ schoolName }: { schoolName: string }) {
 
       {/*
         The mobile overlay. Rendered always (so the entrance can be a CSS
-        transition rather than a mount) but marked `inert` and `hidden` from the
+        transition rather than a mount) but marked `inert` and hidden from the
         accessibility tree when closed, so it is not reachable by keyboard or
-        screen reader while invisible.
+        screen reader while invisible. `inert` is passed as a real boolean — the
+        empty-string cast it used to carry was a workaround for a React version
+        that no longer needs it.
       */}
       <div
         ref={panelRef}
         id="menu-seluler"
         aria-hidden={!menuOpen}
-        {...(!menuOpen ? { inert: '' as unknown as boolean } : {})}
+        inert={!menuOpen}
+        data-lenis-prevent
         className={cn(
           'fixed inset-0 z-40 lg:hidden',
           menuOpen ? 'pointer-events-auto' : 'pointer-events-none',
@@ -226,50 +299,62 @@ export function SiteHeader({ schoolName }: { schoolName: string }) {
           aria-hidden="true"
         />
 
+        {/*
+          The panel scrolls rather than clips. On a short screen — a phone in
+          landscape, or a small window — the list plus the CTA is taller than
+          the viewport, and `justify-center` alone would put the top of the list
+          out of reach. `my-auto` on the inner block centres the content when
+          there is room and collapses to zero when there is not, which is what
+          keeps the first link reachable.
+        */}
         <nav
           aria-label="Navigasi seluler"
-          className="relative flex h-full flex-col justify-center pt-[var(--nav-h)] pb-10"
+          className="relative flex h-full flex-col overflow-y-auto overscroll-contain pt-[var(--nav-h)] pb-10"
+          data-lenis-prevent
         >
-          <ul className="shell flex flex-col">
-            {primaryNav.map((item, index) => (
-              <li key={item.href} className="border-b border-[var(--color-line)] last:border-b-0">
-                <Link
-                  href={item.href}
-                  aria-current={isActive(item.href) ? 'page' : undefined}
-                  style={{
-                    transitionDelay: menuOpen ? `${120 + index * 55}ms` : '0ms',
-                    transitionTimingFunction: 'var(--ease-out)',
-                  }}
-                  className={cn(
-                    'display flex items-baseline gap-4 py-4 text-[clamp(1.75rem,8vw,2.75rem)] transition-[opacity,transform] duration-700',
-                    menuOpen ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0',
-                  )}
-                >
-                  <span className="label shrink-0 text-[var(--color-accent)]">
-                    {String(index + 1).padStart(2, '0')}
-                  </span>
-                  {item.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <div className="my-auto w-full">
+            <ul className="shell flex flex-col">
+              {primaryNav.map((item, index) => (
+                <li key={item.href} className="border-b border-[var(--color-line)] last:border-b-0">
+                  <Link
+                    href={item.href}
+                    aria-current={isActive(item.href) ? 'page' : undefined}
+                    onClick={() => setOpen(false)}
+                    style={{
+                      transitionDelay: menuOpen ? `${120 + index * 55}ms` : '0ms',
+                      transitionTimingFunction: 'var(--ease-out)',
+                    }}
+                    className={cn(
+                      'display flex items-baseline gap-4 py-4 text-[length:var(--step-5)] transition-[opacity,transform] duration-700',
+                      menuOpen ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0',
+                    )}
+                  >
+                    <span className="label shrink-0 text-[var(--color-accent)]">
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
 
-          <div
-            className={cn(
-              'shell mt-10 transition-[opacity,transform] duration-700',
-              menuOpen ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0',
-            )}
-            style={{
-              transitionDelay: menuOpen ? `${120 + primaryNav.length * 55}ms` : '0ms',
-              transitionTimingFunction: 'var(--ease-out)',
-            }}
-          >
-            <Link href="/kontak" className="btn btn--solid w-full justify-between">
-              Hubungi Kami
-              <span className="btn__arrow" aria-hidden="true">
-                →
-              </span>
-            </Link>
+            <div
+              className={cn(
+                'shell mt-10 transition-[opacity,transform] duration-700',
+                menuOpen ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0',
+              )}
+              style={{
+                transitionDelay: menuOpen ? `${120 + primaryNav.length * 55}ms` : '0ms',
+                transitionTimingFunction: 'var(--ease-out)',
+              }}
+            >
+              <Link href="/kontak" className="btn btn--solid w-full justify-between" onClick={() => setOpen(false)}>
+                Hubungi Kami
+                <span className="btn__arrow" aria-hidden="true">
+                  →
+                </span>
+              </Link>
+            </div>
           </div>
         </nav>
       </div>

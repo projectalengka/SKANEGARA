@@ -45,8 +45,15 @@ Thumbs.db
 .idea/
 
 # qa artefacts
+# Tangkapan layar tidak ikut: 177 berkas PNG di `outputs/` berjumlah ±20 MB,
+# dan tidak satu pun dipakai saat membangun situs. Skrip probe (.mjs / .cjs)
+# tetap ikut karena beberapa di antaranya dirujuk oleh README — yang dikecualikan
+# hanya keluarannya, bukan alatnya.
 outputs/*.png
+outputs/**/*.png
 outputs/*-report.json
+outputs/tmp/
+outputs/*.log
 
 # basis data lokal untuk pengembangan
 # Cluster PostgreSQL khusus proyek ini. Isinya data uji, bukan data sekolah,

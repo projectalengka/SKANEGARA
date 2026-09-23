@@ -106,13 +106,17 @@ export default async function ContactPage() {
                 </a>
               ) : null}
 
-              <div className="mt-12 border-t border-[var(--color-line)] pt-8">
-                <p className="label text-[var(--color-text-muted)]">Jam Layanan</p>
-                <p className="mt-3 text-[var(--color-text-muted)]">
-                  Senin–Jumat, 07.00–15.00 WIB. Pesan yang masuk di luar jam tersebut akan dibalas
-                  pada hari kerja berikutnya.
-                </p>
-              </div>
+              {/*
+                No "Jam Layanan" block here.
+
+                It used to read "Senin–Jumat, 07.00–15.00 WIB" — a specific claim
+                about when the school is open, invented to fill the space. Nobody
+                told us the school's office hours, and a parent who drives over on
+                a public holiday because the website said it was open has been
+                actively misled. The school profile has no field for opening
+                hours, so rather than guess the block is removed; it can come
+                back the day there is a real value to show.
+              */}
             </div>
 
             <div className="lg:col-span-7">

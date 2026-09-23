@@ -50,23 +50,45 @@ describe('line-mask CSS owns no transition', () => {
     );
   });
 
-  it('the class-handoff path still gets a transition', () => {
-    const rule = globalCss.slice(globalCss.indexOf('.js .is-revealed .line-mask > span'));
+  it('the attribute-handoff path still gets a transition', () => {
+    const rule = globalCss.slice(globalCss.indexOf('.js [data-revealed] .line-mask > span'));
     assert.match(
       rule.slice(0, rule.indexOf('}')),
       /transition:\s*transform/,
-      'the `.is-revealed` path reveals by adding a class, so it needs the transition GSAP does not provide',
+      'the `[data-revealed]` path reveals by setting an attribute, so it needs the transition GSAP does not provide',
     );
   });
 
-  it('the transition is scoped to `.is-revealed`, not to every mask', () => {
+  it('the transition is scoped to the revealed state, not to every mask', () => {
     const start = globalCss.indexOf('.js .line-mask > span {');
-    const end = globalCss.indexOf('.js .is-revealed .line-mask > span');
+    const end = globalCss.indexOf('.js [data-revealed] .line-mask > span');
     assert.ok(end > start, 'the revealed rule must come after the base rule');
     assert.doesNotMatch(
       globalCss.slice(start, end),
       /transition/,
       'the base mask rule must not carry a transition',
+    );
+  });
+
+  it('reveals by attribute, not by class', () => {
+    // Regression guard for the hydration mismatch, part one.
+    //
+    // A class React did not render is the *worst* case: React owns
+    // `className` on every element it renders, so the diff is unavoidable.
+    // An attribute is a smaller diff — but it is still a diff, and that was
+    // measured the hard way. Part two below is the half that actually makes
+    // the write safe; this assertion only stops the class from coming back.
+    //
+    // The browser-level proof lives in `outputs/audit/probe-reveal-correct.cjs`.
+    assert.match(
+      globalCss,
+      /\[data-reveal\]\[data-revealed\]/,
+      'the revealed state must be selected by attribute in global.css',
+    );
+    assert.doesNotMatch(
+      globalCss,
+      /\.is-revealed/,
+      'a `.is-revealed` class selector must not survive: adding a class React did not render is the hydration mismatch this replaced',
     );
   });
 });
@@ -131,6 +153,217 @@ describe('parallax keeps its percentage channel', () => {
       body,
       /lineSpan|line-mask/,
       'parallax must not be applied to a line span, where the two-channel split bites',
+    );
+  });
+});
+
+/**
+ * The reveal observer must keep watching for elements that arrive late.
+ *
+ * This locks down a bug that was measured in a real browser and that no
+ * screenshot caught.
+ *
+ * `RevealObserver` queried its targets once inside a `useEffect`. Any element
+ * not in the DOM at that instant was never observed, so it kept the CSS start
+ * state — `.js [data-image-reveal] { clip-path: inset(0 0 100% 0) }` — forever.
+ * The element was loaded, opaque and in the layout, and clipped to nothing.
+ *
+ * Measured on the built site, before the fix:
+ *
+ *   /karya    0 of 6 images revealed
+ *   /galeri   0 of 6 images revealed
+ *   /berita   0 of 4 images revealed
+ *   /        18 of 55 reveal targets never revealed
+ *
+ * Every automated signal said "fine": `img.complete` was true,
+ * `getComputedStyle().opacity` was 1, `naturalWidth` was the real pixel width.
+ * The only thing that showed it was counting revealed elements against the
+ * total. So that is what this test protects — architecturally, since a source
+ * assertion is the only thing that runs in the unit gate.
+ */
+describe('the reveal observer catches late-arriving elements', () => {
+  const observerTs = readFileSync(
+    new URL('../src/components/motion/RevealObserver.tsx', import.meta.url),
+    'utf8',
+  );
+
+  it('watches for DOM mutations, not only the initial query', () => {
+    assert.ok(
+      observerTs.includes('MutationObserver'),
+      'RevealObserver must use a MutationObserver — a single querySelectorAll cannot see ' +
+        'elements that mount after the effect runs, and those stay permanently hidden',
+    );
+  });
+
+  it('observes the document body subtree, so nested arrivals are seen', () => {
+    assert.ok(
+      /\.observe\(document\.body,\s*\{[^}]*subtree:\s*true/.test(observerTs),
+      'the MutationObserver must watch `document.body` with `subtree: true`, or elements ' +
+        'inside a streamed section are missed',
+    );
+  });
+
+  it('reruns attachment when something changes', () => {
+    // The mutation callback has to actually re-invoked the attach pass; a
+    // MutationObserver that is constructed and then ignored is worse than none,
+    // because it looks like the fix.
+    assert.ok(
+      /new MutationObserver\(\s*attach\s*\)/.test(observerTs),
+      'the MutationObserver must call the attach pass, not be constructed unused',
+    );
+  });
+
+  it('still honours reduced motion by revealing everything', () => {
+    assert.ok(
+      observerTs.includes('prefers-reduced-motion'),
+      'reduced motion must still short-circuit to "everything revealed"',
+    );
+  });
+
+  it('keeps the start state clip-path, so the wipe still exists', () => {
+    // Guards the other direction: the fix must not be "delete the animation".
+    assert.ok(
+      globalCss.includes('clip-path: inset(0 0 100% 0)'),
+      'the clipped start state must survive — the reveal is a wipe, not a fade',
+    );
+  });
+});
+
+/**
+ * The reveal write must wait for React to take ownership of the element.
+ *
+ * This is the second half of the hydration fix, and the half that was missing
+ * when the first fix was declared done. Switching `class` → `data-revealed`
+ * removed the `className` diff but not the diff: React compares an element's
+ * whole attribute set, so writing `data-revealed` before React hydrates that
+ * element is still a mismatch. The dev overlay showed exactly that:
+ *
+ *     A tree hydrated but some attributes of the server rendered HTML
+ *     didn't match the client properties.
+ *       <div className="relative aspect-3/2 overflow-hidden"
+ *            data-image-reveal={true}
+ *     -      data-revealed=""  >
+ *
+ * Four candidate delays were measured against the moment React actually claims
+ * the node, over four loads of `/kegiatan`:
+ *
+ *     candidate        run1    run2    run3    run4
+ *     load+raf         -64ms   -49ms   -53ms   -64ms   before, every time
+ *     load+raf x2      -48ms   -46ms   -39ms   -26ms   before, every time
+ *     load+raf x3      -28ms   -33ms   -27ms   -14ms   before, every time
+ *     requestIdleCb     +2ms   +25ms    +5ms    +4ms   after, by 2ms once
+ *     load+100ms       +41ms    +9ms   +17ms   +26ms   after
+ *
+ * `requestAnimationFrame` is always too early, and a timer large enough to be
+ * safe is a visible delay. So the gate does not use a timer at all: it waits
+ * for the `__reactFiber$` key React attaches to nodes it owns, which by
+ * definition means the comparison has already happened.
+ *
+ * The failure this must never have is a gate that never opens — that would hide
+ * the site. Hence the assertions on the fallback deadline as well.
+ */
+describe('the reveal write waits for hydration', () => {
+  const observerTs = readFileSync(
+    new URL('../src/components/motion/RevealObserver.tsx', import.meta.url),
+    'utf8',
+  );
+
+  it('gates on the React fiber key rather than on a timer', () => {
+    // Assert on the *code*, not on the prose. The first version of this test
+    // matched the file as a whole, so the string `__reactFiber$` in the
+    // doc comment satisfied it even after the real list was emptied — the test
+    // passed while the gate was broken. Stripping comments first is what makes
+    // it a guard.
+    const code = stripComments(observerTs);
+    assert.match(
+      code,
+      /__reactFiber\$/,
+      'the gate must key off `__reactFiber$` in code (not just in a comment): ' +
+        'every timer measured (rAF, rAF x2, rAF x3) fired before hydration',
+    );
+  });
+
+  it('the fiber prefix list is not empty', () => {
+    // Guards the specific way this can silently stop working: an empty list
+    // makes `claimed()` always return false, so the gate never opens on the
+    // fiber signal and only the deadline saves it.
+    const code = stripComments(observerTs);
+    const match = code.match(/FIBER_KEY_PREFIXES\s*=\s*\[([^\]]*)\]/);
+    assert.ok(match, 'FIBER_KEY_PREFIXES must be declared');
+    const contents = match[1] ?? '';
+    assert.ok(
+      contents.includes('__reactFiber$'),
+      'FIBER_KEY_PREFIXES must actually contain `__reactFiber$`; an empty list means ' +
+        'claimed() never returns true and the gate degrades to a blind 800ms delay',
+    );
+  });
+
+  it('does not schedule the reveal with requestAnimationFrame alone', () => {
+    // The specific regression: a rAF chain *looks* like "after hydration" and
+    // measurably is not. The gate may poll with rAF, but `start()` must be
+    // reachable only through the claimed() check, so any rAF must be
+    // accompanied by the fiber test.
+    const stripped = stripComments(observerTs);
+    if (stripped.includes('requestAnimationFrame')) {
+      assert.ok(
+        stripped.includes('claimed'),
+        'requestAnimationFrame is used, so the fiber check must be present too — ' +
+          'rAF alone was measured firing 14–64ms before hydration on every run',
+      );
+    }
+  });
+
+  it('fails open with a fallback deadline, so content is never trapped hidden', () => {
+    assert.match(
+      stripComments(observerTs),
+      /FALLBACK_MS\s*=\s*\d+/,
+      'the gate needs a bounded deadline: if React ever renames the fiber key the gate ' +
+        'would never open and the whole site would stay at opacity 0',
+    );
+  });
+});
+
+/**
+ * The "Ilustrasi program" flag must fit the box it is drawn in.
+ *
+ * Measured on the built site at 1440px and at 390px: the hero program image box
+ * is 56px wide (`w-14`), and the string "Ilustrasi program" at the original
+ * `0.5625rem` / `0.08em` needed 61px on one line. `scrollWidth` read 61 against
+ * `clientWidth` 56, so the parent's `overflow: hidden` amputated the first word
+ * — the close-up showed "ILUSTRAS / PROGRAM". A label whose entire purpose is
+ * to clarify had become the most visibly broken thing in the hero.
+ *
+ * A source assertion cannot measure pixels, so it locks the two decisions that
+ * caused the overflow instead: the type size and the tracking. The pixel-level
+ * check lives in `outputs/audit/probe-note-flag.cjs`, which reads
+ * `scrollWidth`/`clientWidth` from the running site — run it after touching
+ * this rule.
+ */
+describe('the hero illustration flag fits its box', () => {
+  it('keeps the flag type small enough for a 56px-wide box', () => {
+    // Comments explain the measurement and could be mistaken for the values.
+    const rule = stripComments(cssRule(globalCss, '.hero-program__note'));
+
+    const size = rule.match(/font-size:\s*([\d.]+)rem/);
+    assert.ok(size, 'the flag must declare an explicit font-size');
+    const sizeRem = Number(size[1]);
+    assert.ok(
+      sizeRem <= 0.5,
+      `font-size ${sizeRem}rem was measured to overflow the 56px hero box; 0.5rem is the tested maximum`,
+    );
+
+    const tracking = rule.match(/letter-spacing:\s*([\d.]+)em/);
+    if (tracking) {
+      assert.ok(
+        Number(tracking[1]) <= 0.05,
+        `letter-spacing ${tracking[1]}em pushes "Ilustrasi" past the box width — 0.04em is the tested value`,
+      );
+    }
+
+    assert.doesNotMatch(
+      rule,
+      /white-space:\s*nowrap/,
+      'the flag must be allowed to wrap, or a long word is clipped by the parent overflow:hidden',
     );
   });
 });

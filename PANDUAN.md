@@ -186,10 +186,19 @@ Urutannya tidak penting. Mematikan keduanya tidak menghapus data apa pun.
 | --- | --- |
 | `npm run check` | Periksa tipe TypeScript |
 | `npm run lint` | Periksa gaya penulisan kode |
-| `npm test` | Jalankan 100 uji otomatis |
-| `npm run qa` | Jalankan keempatnya sekaligus |
+| `npm test` | Jalankan uji otomatis |
+| `npm run verify:build` | Pastikan hasil build sudah lengkap |
+| `npm run qa` | Jalankan kelimanya sekaligus |
 
 Semuanya harus berakhir dengan kode `0`. Kalau ada yang merah, jangan diabaikan.
+
+> **Kenapa ada `verify:build`.** Next menamai ulang berkas penjaga rute admin
+> sebagai langkah paling akhir proses build. Kalau proses itu berhenti sedikit
+> saja lebih awal, situs tetap tampak normal dari luar — semua halaman terbuka
+> seperti biasa — tetapi **halaman admin tidak lagi terkunci**, dan tidak ada
+> pesan galat di mana pun. `verify:build` memeriksa hasil build secara langsung
+> supaya keadaan itu ketahuan. Jadi kalau Anda men-deploy, jalankan
+> `npm run qa`, bukan `npm run build` saja.
 
 ## Pemeriksaan tampilan di browser asli
 
@@ -201,6 +210,17 @@ node outputs/probe-hero.mjs     # khusus judul halaman depan
 node outputs/probe-auth.mjs     # khusus jalur login admin
 ```
 
+Untuk memastikan tidak ada peringatan React di konsol browser — dan bahwa semua
+elemen beranimasi tetap muncul setelah halaman digulir:
+
+```bash
+node outputs/audit/probe-production.cjs http://127.0.0.1:3000
+```
+
+Baris terakhirnya harus berbunyi `hydration warnings : 0` dan
+`elements stuck hidden: 0`. Jalankan juga sekali dengan `http://127.0.0.1:3001`
+kalau ingin memeriksa mode pengembangan.
+
 Hasil tangkapan layar tersimpan di folder `outputs/`.
 
 ---
@@ -211,6 +231,12 @@ Tujuan: situs bisa dibuka siapa saja lewat alamat sendiri, dan Anda bisa
 mengelola konten dari mana saja tanpa menyalakan komputer.
 
 Yang dipakai: **Vercel** (menghost situs) + **Supabase** (basis data).
+
+> **Ingin versi yang lebih rinci?** Berkas **[`DEPLOY.md`](./DEPLOY.md)** memuat
+> daftar centang langkah demi langkah — termasuk memastikan tidak ada kredensial
+> yang ikut ter-commit, menyetel versi Node di Vercel, memasang Cloudinary, dan
+> memeriksa bahwa penjaga rute admin benar-benar bekerja setelah deploy.
+> Bagian di bawah ini adalah ringkasannya.
 
 ```
 Komputer Anda  ──push──►  GitHub  ──auto──►  Vercel  ──baca/tulis──►  Supabase
@@ -242,9 +268,13 @@ git branch -M main
 git push -u origin main
 ```
 
-> Repositori git lokal sudah siap dengan 2 commit. Yang **tidak** ikut terunggah:
-> `.env` (kredensial), `.pgdata/` (basis data lokal), dan catatan kerja internal.
-> Itu sudah diatur di `.gitignore`.
+> Repositori git lokal sudah siap, tetapi **pekerjaan Anda yang belum di-commit
+> harus di-commit lebih dulu** — kalau tidak, berkas sumber yang masih baru
+> (mis. `src/data/sample.ts`) tidak ikut ter-upload dan build di Vercel gagal
+> dengan `Module not found`. Jalankan `git status` dulu; lihat `DEPLOY.md`
+> Bagian 1. Yang **tidak** ikut terunggah: `.env` (kredensial), `.pgdata/`
+> (basis data lokal), dan catatan kerja internal — itu sudah diatur di
+> `.gitignore`.
 
 ## Langkah 3 — Deploy di Vercel
 
@@ -365,6 +395,43 @@ apa saja yang masih kosong. Itu panduan kerja Anda — isi satu per satu.
 Saat ini yang masih kosong: deskripsi sekolah, sejarah, visi, alamat lengkap,
 nomor telepon, dan alamat email. **Berita dan Kegiatan sengaja kosong** karena
 saya tidak boleh mengarang berita sekolah — isi kalau memang sudah ada datanya.
+
+## Mau lihat situsnya "penuh" dulu sebelum diisi?
+
+Ada **mode contoh**. Kalau dinyalakan, halaman Berita, Kegiatan, Galeri dan
+Karya Siswa diisi data karangan supaya Anda bisa menilai tata letaknya. Setiap
+judulnya diawali tulisan **`[CONTOH]`**, jadi tidak akan pernah tertukar dengan
+berita asli.
+
+**Menyalakan:**
+
+1. Buka berkas `.env` dengan Notepad.
+2. Cari baris `SAMPLE_DATA=`, lalu isi jadi `SAMPLE_DATA=on`.
+3. **Matikan lalu nyalakan ulang** situsnya (tutup jendela `npm run dev`,
+   jalankan lagi).
+
+**Mematikan** (kembali ke keadaan kosong yang sebenarnya):
+
+1. Buka `.env`, ubah jadi `SAMPLE_DATA=off` — atau hapus barisnya.
+2. Nyalakan ulang situsnya.
+
+Saat mode contoh hidup, **sidebar dasbor menampilkan peringatan "Mode contoh
+aktif"** supaya Anda tidak perlu menebak apa yang sedang dilihat pengunjung.
+
+Yang perlu diingat: data contoh **tidak akan menimpa tulisan yang sudah Anda
+buat sendiri**. Begitu Anda menerbitkan satu berita asli, berita asli itulah yang
+muncul — data contoh hanya mengisi ruang yang masih kosong.
+
+Satu detail soal halaman **Karya Siswa**: data contoh menggantikan karya selama
+judulnya **masih berupa tanda kurung siku**, misalnya `[Judul karya Poster — isi
+melalui Dasbor Admin]`. Begitu Anda mengganti satu judul dengan judul asli,
+seluruh daftar karya dibiarkan apa adanya — tidak dicampur lagi dengan contoh.
+Ini disengaja: karya asli dan karya karangan tidak boleh tampil berdampingan.
+
+Catatan: data contoh untuk **Galeri** juga tidak dipakai, karena keterangan foto
+bawaan ("Kegiatan Belajar", "Praktik di Workshop") sudah berupa tulisan jadi,
+bukan placeholder. Galeri tetap menampilkan enam keterangan itu sampai Anda
+unggah foto sendiri.
 
 ## Nama siswa
 

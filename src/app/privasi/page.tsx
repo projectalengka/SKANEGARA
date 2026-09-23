@@ -100,8 +100,13 @@ export default function PrivacyPage() {
                 <h2 className="label text-[var(--color-accent)]">06 — Perubahan</h2>
                 <div className="mt-5 flex flex-col gap-4 text-[var(--color-text-muted)]">
                   <p>
-                    Jika kebijakan ini berubah, kami akan memperbarui halaman ini. Tanggal pembaruan
-                    terakhir tercatat pada bagian atas halaman.
+                    {/* This used to claim "Tanggal pembaruan terakhir tercatat pada
+                        bagian atas halaman" — but the page hero renders an index
+                        number and a standfirst, and no date. A privacy policy
+                        that points at a date that does not exist is the kind of
+                        detail that makes a reader distrust the rest of it. */}
+                    Jika kebijakan ini berubah, kami akan memperbarui halaman ini agar selalu
+                    mencerminkan perilaku situs yang sebenarnya.
                   </p>
                 </div>
               </section>

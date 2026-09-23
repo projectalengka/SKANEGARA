@@ -82,7 +82,29 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const profile = await getSchoolProfile();
 
   return (
-    <html lang="id">
+    /*
+      `className="js"` is rendered by the *server*, not added by a script.
+
+      It used to be added by the inline `<head>` script below, and that produced
+      a hydration mismatch React reported on every page:
+
+        <html lang="id"
+        -   className="js"
+
+      The class deliberately is *not* rendered here. `.js [data-reveal]` sets
+      `opacity: 0`, and `data-revealed` is what brings it back, so a visitor
+      whose JavaScript is disabled would receive `class="js"` from the server,
+      get the hiding rule, and have no script left to reveal anything — they
+      would see a permanently blank page. The class must therefore stay a
+      client-side decision, which means React has to be told to tolerate it.
+
+      `suppressHydrationWarning` covers `js` here and `lenis`, which Lenis adds
+      to `<html>` once it is actually driving the scroll. Both are correct by
+      design and impossible to server-render. Note this covers only `<html>`'s
+      own attributes — every descendant is still compared normally, so a
+      mismatch anywhere else in the page is still reported.
+    */
+    <html lang="id" suppressHydrationWarning>
       <head>
         {/*
           Preload the one face that paints above the fold — Instrument Sans,
@@ -105,16 +127,31 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           type="font/woff2"
           crossOrigin="anonymous"
         />
+        {/* Reveal components opt in only after their observers are ready.
+            A blocked client bundle therefore leaves the server content visible. */}
+
         {/*
-          The progressive-enhancement switch. `.js` gates every rule that hides
-          content for an entrance animation, so this runs before paint and the
-          site is visible-but-unrevealed rather than hidden-then-visible. If
-          scripting is off, the class is never added and all content is simply
-          present.
+          Mark the document as script-capable before paint.
+
+          The whole progressive-enhancement system hangs on the `.js` class:
+          every CSS rule that hides content for an animation is gated behind it,
+          so that a visitor whose bundle never loads sees the finished page
+          rather than an empty one. That gate is backwards-invisible — without
+          this script the site renders, nothing errors, and the animations
+          simply never hide or reveal anything.
+
+          It must run *before* the first paint, which is why it is an inline
+          blocking script in `<head>` rather than an effect inside a client
+          component: an effect runs after hydration, so a masked headline would
+          flash in its final position and then jump back to be re-animated.
+
+          `dangerouslySetInnerHTML` is not needed — Next.js serialises a string
+          child of `<script>` verbatim, and the content is a static literal with
+          no interpolation, so there is no injection surface.
         */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `document.documentElement.classList.add('js');`,
+            __html: `try{document.documentElement.classList.add('js')}catch(e){}`,
           }}
         />
       </head>
@@ -126,7 +163,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <RevealObserver />
         <CustomCursor />
         <SiteHeader schoolName={profile.schoolName} />
-        <main id="konten">{children}</main>
+        <main id="konten" tabIndex={-1}>{children}</main>
         <SiteFooter profile={profile} />
       </body>
     </html>

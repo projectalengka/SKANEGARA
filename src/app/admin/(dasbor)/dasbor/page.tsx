@@ -94,7 +94,7 @@ export default async function DashboardPage() {
             tersimpan. Isi variabel berikut pada berkas <code className="font-[family-name:var(--font-mono)]">.env</code>{' '}
             lalu jalankan <code className="font-[family-name:var(--font-mono)]">npm run db:push</code>:
           </p>
-          <ul className="mt-4 flex flex-col gap-1.5 font-[family-name:var(--font-mono)] text-[0.8125rem]">
+          <ul className="mt-4 flex flex-col gap-1.5 font-[family-name:var(--font-mono)] text-[length:var(--step--1)]">
             <li>DATABASE_URL</li>
             <li>DIRECT_URL</li>
           </ul>
@@ -123,7 +123,7 @@ export default async function DashboardPage() {
                 >
                   <span>{count.label}</span>
                   <span className="flex items-center gap-4">
-                    <span className="display text-[1.5rem]">{String(count.value).padStart(2, '0')}</span>
+                    <span className="display text-[length:var(--step-3)]">{String(count.value).padStart(2, '0')}</span>
                     <span aria-hidden="true" className="transition-transform duration-300 group-hover:translate-x-1">
                       →
                     </span>
@@ -134,7 +134,7 @@ export default async function DashboardPage() {
           </ul>
 
           {drafts > 0 ? (
-            <p className="mt-5 border-t border-[var(--color-line)] pt-4 text-[0.9375rem] text-[var(--color-text-muted)]">
+            <p className="mt-5 border-t border-[var(--color-line)] pt-4 text-[length:var(--step-0)] text-[var(--color-text-muted)]">
               {drafts} berita masih berstatus draf dan belum tampil di situs publik.
             </p>
           ) : null}

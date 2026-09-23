@@ -82,8 +82,8 @@ export function EventManager({ events }: { events: EventContent[] }) {
 
       {creating ? (
         <div className="mb-8 border border-[var(--color-ink)] bg-[var(--color-paper)] px-6 py-7">
-          <h2 className="display text-[1.5rem]">Kegiatan Baru</h2>
-          <p className="mt-2 text-[0.9375rem] text-[var(--color-text-muted)]">
+          <h2 className="display text-[length:var(--step-3)]">Kegiatan Baru</h2>
+          <p className="mt-2 text-[length:var(--step-0)] text-[var(--color-text-muted)]">
             Kegiatan dengan tanggal setelah hari ini tampil pada bagian Akan Datang di halaman
             Kegiatan.
           </p>

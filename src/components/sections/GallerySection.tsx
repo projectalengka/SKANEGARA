@@ -34,7 +34,7 @@ export function GallerySection({
           <div className="lg:col-span-9">
             <h2
               id="judul-galeri"
-              className="display text-[clamp(2.25rem,7.5vw,5.5rem)] leading-[0.9]"
+              className="display text-[length:var(--step-7)] leading-[0.9]"
               data-reveal
             >
               {lines.map((line, index) => (

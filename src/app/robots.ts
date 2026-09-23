@@ -16,10 +16,14 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/admin', '/admin/', '/api/'],
+        // `/admin` already covers `/admin/` and everything beneath it; the
+        // trailing-slash entry was redundant. `/api/` stays.
+        disallow: ['/admin', '/api/'],
       },
     ],
     sitemap: absoluteUrl('/sitemap.xml'),
-    host: absoluteUrl('/'),
+    // The `Host` directive takes an origin, not a URL with a path — a trailing
+    // slash is not part of it. `absoluteUrl('/')` was emitting one.
+    host: absoluteUrl('/').replace(/\/$/, ''),
   };
 }

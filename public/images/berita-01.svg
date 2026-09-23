@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-label="Berita 01">
+  <rect width="1600" height="900" fill="#f2f2f2" />
+  <circle cx="0" cy="900" r="217" fill="none" stroke="#0a0a0a" stroke-opacity="0.060" stroke-width="1" /><circle cx="0" cy="900" r="434" fill="none" stroke="#0a0a0a" stroke-opacity="0.080" stroke-width="1" /><circle cx="0" cy="900" r="651" fill="none" stroke="#0a0a0a" stroke-opacity="0.100" stroke-width="1" /><circle cx="0" cy="900" r="869" fill="none" stroke="#c8341f" stroke-opacity="0.85" stroke-width="10" /><circle cx="0" cy="900" r="1086" fill="none" stroke="#0a0a0a" stroke-opacity="0.140" stroke-width="1" /><circle cx="0" cy="900" r="1303" fill="none" stroke="#0a0a0a" stroke-opacity="0.160" stroke-width="1" /><circle cx="0" cy="900" r="1520" fill="none" stroke="#0a0a0a" stroke-opacity="0.180" stroke-width="1" />
+  <rect x="128" y="819" width="1344" height="1" fill="#0a0a0a" fill-opacity="0.2" />
+  <text x="128" y="864" font-family="monospace" font-size="11" letter-spacing="2" fill="#0a0a0a" fill-opacity="0.45">BERITA 01</text>
+</svg>

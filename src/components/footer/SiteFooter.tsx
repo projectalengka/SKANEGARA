@@ -31,7 +31,7 @@ export function SiteFooter({ profile }: { profile: SchoolProfileContent }) {
         <div className="grid gap-14 lg:grid-cols-[1.4fr_1fr_1fr] lg:gap-10">
           <div>
             <p className="label text-[var(--color-text-faint)]">Sekolah Menengah Kejuruan</p>
-            <p className="display mt-5 text-[clamp(2.5rem,9vw,5.5rem)] leading-[0.9]">
+            <p className="display mt-5 text-[length:var(--step-7)] leading-[0.9]">
               SMK
               <br />
               <em>{profile.schoolName.replace(/^SMK\s+/i, '')}</em>
@@ -128,7 +128,7 @@ export function SiteFooter({ profile }: { profile: SchoolProfileContent }) {
           </div>
         </div>
 
-        <div className="mt-16 flex flex-col gap-3 border-t border-[var(--color-line-dark)] pt-6 font-[family-name:var(--font-mono)] text-[0.6875rem] uppercase tracking-[0.12em] text-[var(--color-text-faint)] sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-16 flex flex-col gap-3 border-t border-[var(--color-line-dark)] pt-6 font-[family-name:var(--font-mono)] text-[length:var(--step--2)] uppercase tracking-[0.12em] text-[var(--color-text-faint)] sm:flex-row sm:items-center sm:justify-between">
           <p>
             © {year} {profile.schoolName}
           </p>

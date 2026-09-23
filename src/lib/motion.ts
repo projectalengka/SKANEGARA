@@ -18,13 +18,13 @@ export const DUR = {
   /** Instant feedback: hover, press. */
   tap: 0.35,
   /** Standard entrance for a block of content. */
-  reveal: 0.9,
+  reveal: 0.65,
   /** Entrances that should feel like they settle, not arrive. */
   settle: 1.2,
   /** Full-screen transitions: the mobile menu, the lightbox. */
   screen: 0.7,
-  /** The hero. Long, because there is nothing above it to compete with. */
-  hero: 1.4,
+  /** Editorial reveal; short enough never to gate exploration. */
+  hero: 0.95,
 } as const;
 
 /** Travel distance in pixels. Deliberately small — see the note above. */

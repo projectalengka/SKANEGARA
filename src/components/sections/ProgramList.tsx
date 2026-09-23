@@ -63,7 +63,6 @@ export function ProgramList({ programs }: { programs: ProgramContent[] }) {
         className="pointer-events-none fixed top-0 left-0 z-30 hidden lg:block"
         style={{
           transform: `translate3d(${pointer.x + 28}px, ${pointer.y - 130}px, 0)`,
-          transition: 'transform 700ms var(--ease-out)',
         }}
       >
         <div className="relative h-[17rem] w-[13rem] overflow-hidden">
@@ -107,6 +106,24 @@ export function ProgramList({ programs }: { programs: ProgramContent[] }) {
               href={`/program-keahlian/${program.slug}`}
               className="relative grid grid-cols-[auto_1fr_auto] items-center gap-5 py-7 sm:gap-8 sm:py-9"
             >
+              {/* The touch-device thumbnail.
+
+                  The floating preview layer is `hidden lg:block`, and a touch
+                  device has no hover to trigger it — so without this the rows
+                  carried no imagery at all on a phone, which is the device most
+                  of this site's visitors are using. The docstring above claimed
+                  this existed; it did not. It is `lg:hidden` so the two can
+                  never both be on screen. */}
+              <span className="relative block h-16 w-14 shrink-0 overflow-hidden bg-[var(--color-paper-warm)] lg:hidden">
+                <Image
+                  src={program.image || '/images/program-placeholder.svg'}
+                  alt=""
+                  fill
+                  sizes="3.5rem"
+                  className="object-cover"
+                />
+              </span>
+
               <span className="label text-[var(--color-text-muted)] transition-colors duration-500 group-hover:text-[var(--color-accent)]">
                 {String(index + 1).padStart(2, '0')}
               </span>
@@ -114,12 +131,12 @@ export function ProgramList({ programs }: { programs: ProgramContent[] }) {
               <span className="min-w-0">
                 {/* The name moves right on hover — a 12px translation that reads
                     as the row acknowledging the pointer. */}
-                <span className="display block text-[clamp(1.6rem,5.5vw,3.25rem)] leading-[1.02] transition-transform duration-700 group-hover:translate-x-3">
+                <span className="display block text-[length:var(--step-5)] leading-[1.02] transition-transform duration-700 group-hover:translate-x-3">
                   {program.name}
                 </span>
                 {/* The description reveals height on hover on desktop, and is
                     always visible on touch where there is no hover to trigger it. */}
-                <span className="mt-2 block max-w-xl text-[0.9375rem] text-[var(--color-text-muted)] transition-[opacity,transform] duration-700 lg:translate-y-2 lg:opacity-0 lg:group-hover:translate-y-0 lg:group-hover:opacity-100 lg:group-focus-within:translate-y-0 lg:group-focus-within:opacity-100">
+                <span className="mt-2 block max-w-xl text-[length:var(--step-0)] text-[var(--color-text-muted)] transition-[opacity,transform] duration-700 lg:translate-y-2 lg:opacity-0 lg:group-hover:translate-y-0 lg:group-hover:opacity-100 lg:group-focus-within:translate-y-0 lg:group-focus-within:opacity-100">
                   {program.shortDescription}
                 </span>
               </span>

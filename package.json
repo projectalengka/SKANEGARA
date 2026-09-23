@@ -16,7 +16,10 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "db:verify": "tsx scripts/verify-db.ts",
-    "qa": "npm run check && npm run lint && npm test && npm run build",
+    "images": "tsx scripts/make-placeholders.ts",
+    "verify:build": "tsx scripts/verify-build.ts",
+    "qa": "npm run check && npm run lint && npm test && npm run build && npm run verify:build",
+    "qa:lengkap": "npm run check && npm run lint && npm test && npm run build && npm run verify:build -- --url http://127.0.0.1:3000",
     "dev:jaringan": "next dev --webpack --hostname 0.0.0.0",
     "start:jaringan": "next start --hostname 0.0.0.0"
   },

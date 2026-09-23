@@ -49,7 +49,7 @@ export default async function LoginPage({
 
         <div className="mt-10 bg-[var(--color-paper)] px-7 py-9 sm:px-9 sm:py-11">
           <p className="label text-[var(--color-text-muted)]">Dasbor</p>
-          <h1 className="display mt-4 text-[clamp(2rem,7vw,3rem)] leading-[0.95]">
+          <h1 className="display mt-4 text-[length:var(--step-5)] leading-[0.95]">
             Masuk ke
             <br />
             <em>Dasbor.</em>
@@ -65,17 +65,17 @@ export default async function LoginPage({
             ) : (
               <div className="border-l-2 border-[var(--color-accent-deep)] bg-[var(--color-paper-warm)] px-5 py-5">
                 <p className="label text-[var(--color-accent-deep)]">Belum dikonfigurasi</p>
-                <p className="mt-3 text-[0.9375rem] text-[var(--color-text-muted)]">
+                <p className="mt-3 text-[length:var(--step-0)] text-[var(--color-text-muted)]">
                   Autentikasi belum diatur, sehingga login tidak dapat dilakukan. Isi variabel berikut
                   pada berkas <code className="font-[family-name:var(--font-mono)]">.env</code>, lalu
                   jalankan ulang aplikasi:
                 </p>
-                <ul className="mt-4 flex flex-col gap-2 font-[family-name:var(--font-mono)] text-[0.8125rem] text-[var(--color-text)]">
+                <ul className="mt-4 flex flex-col gap-2 font-[family-name:var(--font-mono)] text-[length:var(--step--1)] text-[var(--color-text)]">
                   <li>AUTH_SECRET</li>
                   <li>ADMIN_EMAIL</li>
                   <li>ADMIN_PASSWORD</li>
                 </ul>
-                <p className="mt-4 text-[0.9375rem] text-[var(--color-text-muted)]">
+                <p className="mt-4 text-[length:var(--step-0)] text-[var(--color-text-muted)]">
                   Cara membuatnya dijelaskan pada <strong>README.md</strong>.
                 </p>
               </div>

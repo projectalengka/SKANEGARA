@@ -61,7 +61,7 @@ export default async function ProgramsPage() {
                         {String(index + 1).padStart(2, '0')}
                       </p>
                       <h2
-                        className="display mt-5 text-[clamp(2rem,6vw,4.25rem)] leading-[0.92]"
+                        className="display mt-5 text-[length:var(--step-6)] leading-[0.92]"
                         data-reveal
                       >
                         {program.name}

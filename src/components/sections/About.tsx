@@ -39,7 +39,7 @@ export function About({
             </p>
             <h2
               id="judul-tentang"
-              className="display mt-6 text-[clamp(2.5rem,7vw,5rem)] leading-[0.9]"
+              className="display mt-6 text-[length:var(--step-7)] leading-[0.9]"
               data-reveal
             >
               {prefix}

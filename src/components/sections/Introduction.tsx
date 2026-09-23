@@ -10,12 +10,12 @@ import type { SectionContent } from '@/data/defaults';
  * The restraint is the point; a second hero here would make the first one cheap.
  */
 export function OrientationStrip({ profile }: { profile: { city: string; province: string } }) {
-  const items = ['Sekolah Menengah Kejuruan', profile.city, profile.province, 'Sejak —'];
+  const items = ['Sekolah Menengah Kejuruan', profile.city, profile.province];
 
   return (
     <section aria-label="Ringkasan sekolah" className="border-y border-[var(--color-line)]">
       <div className="shell flex flex-wrap items-center gap-x-8 gap-y-3 py-5">
-        <ul className="flex flex-wrap items-center gap-x-6 gap-y-2 font-[family-name:var(--font-mono)] text-[0.6875rem] uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
+        <ul className="flex flex-wrap items-center gap-x-6 gap-y-2 font-[family-name:var(--font-mono)] text-[length:var(--step--2)] uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
           {items.map((item, index) => (
             <li key={item} className="flex items-center gap-6">
               {index > 0 ? (
@@ -53,7 +53,7 @@ export function Introduction({ section }: { section: SectionContent }) {
 
         <h2
           id="judul-perkenalan"
-          className="display mt-10 text-[clamp(2.75rem,11vw,8.5rem)] leading-[0.88] text-[var(--color-text)]"
+          className="display mt-10 text-[length:var(--step-7)] leading-[0.88] text-[var(--color-text)]"
           data-reveal
         >
           {words.map((word, index) => (

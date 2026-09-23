@@ -211,13 +211,21 @@
   --reveal-delay: 0ms;
 }
 
+/* The revealed state is carried by `data-revealed`, not by a `class`. That
+   matters less than it looks: React compares an element's *whole attribute set*
+   against its virtual DOM, so an extra attribute is still a diff and still
+   reported. It is a smaller diff than a class — React owns `className` outright
+   — but the thing that actually makes the write safe is the timing gate in
+   `RevealObserver.tsx`, which waits until React has taken ownership of the
+   element before writing. Both halves are needed; see that file for the
+   measurements. */
 .js [data-reveal] {
   opacity: 0;
   transform: translate3d(0, var(--reveal-y), 0);
   will-change: opacity, transform;
 }
 
-.js [data-reveal].is-revealed {
+.js [data-reveal][data-revealed] {
   opacity: 1;
   transform: none;
   transition:
@@ -227,23 +235,49 @@
 }
 
 /* Image reveal: a wipe, not a fade. A fade says "here is a picture"; a wipe
-   says "here is a picture being uncovered", which is the editorial cue. */
-.js [data-image-reveal] {
-  clip-path: inset(0 0 100% 0);
-}
-
-.js [data-image-reveal].is-revealed {
-  clip-path: inset(0 0 0 0);
-  transition: clip-path 1.2s var(--ease-out) var(--reveal-delay, 0ms);
-}
-
+   says "here is a picture being uncovered", which is the editorial cue.
+   
+   ## Why the wipe is drawn on the image, not on the observed element
+   
+   The first version put `clip-path: inset(0 0 100% 0)` on the element that
+   carries `data-image-reveal`, and revealed it by removing that clip. It was a
+   deadlock, and it was measured: a fully-clipped element reports
+   `isIntersecting: false, intersectionRatio: 0` to IntersectionObserver *even
+   when centred in the viewport*. A controlled two-box test confirmed it — the
+   clipped box read `ratio: 0`, an identical unclipped box read `ratio: 0.3`.
+   
+   So the observer whose job was to un-clip the element could never see it. On
+   the built site that left 30 elements permanently invisible, including every
+   single image on /karya, /galeri and /berita. `img.complete` was true,
+   `naturalWidth` was real, `opacity` was 1 — and the element was clipped to
+   nothing. Nothing in a screenshot said so.
+   
+   The fix keeps the identical visual wipe and moves it one level in: the
+   observed element stays geometrically intact (so the observer can see it),
+   and its child image is what gets clipped. `> *` is the image, because
+   `next/image` with `fill` renders it as the direct child. */
 .js [data-image-reveal] > * {
+  clip-path: inset(0 0 100% 0);
   transform: scale(1.06);
-  transition: transform 1.4s var(--ease-out) var(--reveal-delay, 0ms);
+  transition:
+    clip-path 1.2s var(--ease-out) var(--reveal-delay, 0ms),
+    transform 1.4s var(--ease-out) var(--reveal-delay, 0ms);
 }
 
-.js [data-image-reveal].is-revealed > * {
+.js [data-image-reveal][data-revealed] > * {
+  clip-path: inset(0 0 0 0);
   transform: scale(1);
+}
+
+/* Reduced motion: no wipe at all. The observer already reveals everything up
+   front when the preference is set; this makes the CSS agree rather than
+   relying on a class that a blocked script might never add. */
+@media (prefers-reduced-motion: reduce) {
+  .js [data-image-reveal] > * {
+    clip-path: none;
+    transform: none;
+    transition: none;
+  }
 }
 
 /* Line-by-line text reveal. Each line sits in its own overflow-hidden box,
@@ -280,15 +314,341 @@
   transform: translate3d(0, 110%, 0);
 }
 
-/* The class handoff, kept for the paths that reveal by adding a class rather
-   than by tweening (the IntersectionObserver fallback and `observeReveals`).
-   `!important` because GSAP's inline transform would otherwise win, and this
-   rule only ever applies to an element GSAP has not been asked to animate. */
-.js .is-revealed .line-mask > span,
-.js .line-mask.is-revealed > span {
+/* The attribute handoff, for the paths that reveal without tweening (the
+   IntersectionObserver fallback). `!important` because GSAP's inline transform
+   would otherwise win, and this rule only ever applies to an element GSAP has
+   not been asked to animate. */
+.js [data-revealed] .line-mask > span,
+.js .line-mask[data-revealed] > span {
   transform: none;
   transition: transform 1.1s var(--ease-out);
   transition-delay: var(--line-delay, 0ms);
+}
+
+/* ===========================================================================
+   The hero — editorial masthead
+   ---------------------------------------------------------------------------
+   Type over image, not image behind type. The composition is:
+
+     masthead      a running head: the school's location on the left, an
+                   edition line on the right, separated by a hairline.
+     composition   the headline on the left at display scale, and a two-entry
+                   programme index on the right. The index is the only place an
+                   image appears, and it is small on purpose — a large
+                   photograph here would make the headline a caption.
+     bottom        tagline, calls to action, and the scroll cue.
+
+   Every value here is a token. Nothing in this block hardcodes a colour, so
+   re-branding stays a one-line change in tokens.css.
+   =========================================================================== */
+
+.hero-editorial {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  /* `100svh` rather than `100vh`: on a phone the dynamic toolbar would otherwise
+     make the hero taller than the visible viewport, and the bottom row — the
+     calls to action and the scroll cue — would sit below the fold. */
+  min-height: 100svh;
+  padding-block: calc(var(--nav-h) + 1.5rem) 2.5rem;
+  background: var(--color-paper);
+  overflow: hidden;
+}
+
+.hero-editorial__inner {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: clamp(2rem, 5vw, 4.5rem);
+}
+
+/* -- Masthead ------------------------------------------------------------ */
+
+.hero-editorial__masthead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-text-muted);
+}
+
+.hero-editorial__edition {
+  /* The right-hand running head. It reads as one line wherever it fits, which
+     is the intent — a running head split into two ragged fragments looks like
+     a mistake. But `nowrap` alone was a latent overflow: the string measures
+     ~324px at the smallest label size once letter-spacing is counted, and a
+     320px phone has 280px of it inside the gutter. The masthead is a wrapping
+     flex row, so the honest instruction is "keep it on one line while you can,
+     otherwise wrap" rather than a hard nowrap that pokes past the viewport.
+     `balance` keeps the wrapped result from looking accidental. */
+  text-wrap: balance;
+  color: var(--color-text-muted);
+}
+
+/* -- Composition --------------------------------------------------------- */
+
+.hero-editorial__composition {
+  display: grid;
+  flex: 1 1 auto;
+  align-content: center;
+  gap: clamp(2rem, 5vw, 4rem);
+  /* Single column on a phone: the index drops below the headline rather than
+     squeezing beside it, which is the only way both stay legible at 320px. */
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 1024px) {
+  .hero-editorial__composition {
+    /* The headline gets the larger share; the index is deliberately narrow. */
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    align-items: end;
+    gap: clamp(2rem, 4vw, 5rem);
+  }
+}
+
+.hero-editorial__copy {
+  min-width: 0;
+}
+
+.hero-editorial__school {
+  color: var(--color-accent);
+}
+
+.hero-editorial__title {
+  margin-top: clamp(0.75rem, 2vw, 1.25rem);
+  /* The hero used to be its own hand-tuned clamp (2.5–8.5rem, a 3.4× range).
+     That range was wider than the whole rest of the scale combined, which is
+     why the headline felt like a different document from the page beneath it.
+     It is now --step-8, the top rung — dramatic because it is the loudest
+     thing on the scale, not because it opted out of the scale. */
+  font-size: var(--step-8);
+  line-height: 0.9;
+  color: var(--color-text);
+}
+
+/* Each authored line is its own block. `splitLines` wraps these in masks, so
+   this only has to establish the stacking — the mask owns the clipping. */
+.hero-editorial__line {
+  display: block;
+}
+
+/* The second and subsequent lines drop to weight 400 against the 600 of the
+   first. That weight contrast is the accent the old serif used to provide. */
+.hero-editorial__line--soft {
+  font-weight: 400;
+}
+
+/* -- Programme index ----------------------------------------------------- */
+
+.hero-editorial__index {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+  border-top: 1px solid var(--color-line);
+  padding-top: 1rem;
+}
+
+.hero-editorial__index-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--color-text-muted);
+}
+
+.hero-program {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.9rem;
+  padding-block: 0.5rem;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.hero-program:last-child {
+  border-bottom: 0;
+}
+
+.hero-program__image {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  background: var(--color-paper-warm);
+}
+
+.hero-program__image img {
+  transition: transform 0.9s var(--ease-out);
+}
+
+.hero-program:hover .hero-program__image img,
+.hero-program:focus-visible .hero-program__image img {
+  transform: scale(1.06);
+}
+
+/* The "Ilustrasi program" flag. Absolute inside the image box so it stays
+   legible over whatever artwork sits behind it.
+
+   ## Why it is allowed to grow upward instead of sitting flush at the bottom
+
+   The flag lies across the *width* of the image box, and in the desktop hero
+   that box is only 56px wide (`w-14`). Measured at 1440px and at 390px: the
+   string "Ilustrasi program" needs 61px on one line at 9px, so it wrapped to
+   three lines inside a 26px-tall box — 61 > 56 meant the first line was
+   clipped mid-word by the parent's `overflow: hidden`, and 3 x 9px = 27px
+   meant the last line was cut off vertically too. The close-up showed
+   "ILUSTRAS / PROGRAM": a label that was meant to clarify had become the most
+   obviously broken thing on the screen.
+
+   Two changes, both measured after:
+
+   - `font-size` drops to 0.5rem and `letter-spacing` to 0.04em, so the longest
+     word ("Ilustrasi") fits inside 56px instead of spilling past it.
+   - the box is padded on the sides and allowed to wrap to two lines, with
+     `hyphens: none` so no word is ever broken mid-character.
+
+   `overflow: hidden` stays on the parent — the flag is legible inside it now,
+   and the artwork behind it still must not bleed out of the box. */
+.hero-program__note {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  padding: 0.2rem 0.15rem;
+  background: color-mix(in srgb, var(--color-ink) 72%, transparent);
+  color: var(--color-paper);
+  /* Deliberately below --step--2 (10px). This caption sits inside a 96px
+     program thumbnail; at 10px it overflows the chip and the overflow clips
+     the word rather than wrapping it. The floor of the scale is a floor for
+     *reading text*, not for a two-word label on a postage stamp. */
+  font-size: 0.5rem;
+  line-height: 1.15;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-wrap: balance;
+  hyphens: none;
+  overflow-wrap: normal;
+}
+
+.hero-program__caption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+  color: var(--color-text);
+}
+
+.hero-program__caption .label {
+  color: var(--color-text-muted);
+}
+
+.hero-program:hover .hero-program__caption,
+.hero-program:focus-visible .hero-program__caption {
+  color: var(--color-accent);
+}
+
+.hero-program:hover .hero-program__caption .label,
+.hero-program:focus-visible .hero-program__caption .label {
+  color: var(--color-accent);
+}
+
+/* -- Bottom row ---------------------------------------------------------- */
+
+.hero-editorial__bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.25rem 2rem;
+  padding-top: clamp(1.5rem, 3vw, 2.5rem);
+  border-top: 1px solid var(--color-line);
+}
+
+.hero-editorial__bottom > p {
+  max-width: 26rem;
+  color: var(--color-text-muted);
+}
+
+.hero-editorial__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+}
+
+.hero-editorial__scroll {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-text-muted);
+  transition: color 0.4s var(--ease-out);
+}
+
+.hero-editorial__scroll:hover,
+.hero-editorial__scroll:focus-visible {
+  color: var(--color-accent);
+}
+
+/* On a phone the bottom row stacks: copy, then actions, then the cue. Three
+   items on one line at 320px would each be too narrow to read. */
+@media (max-width: 639px) {
+  .hero-editorial__bottom {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .hero-editorial__scroll {
+    order: 3;
+  }
+}
+
+/* ===========================================================================
+   Gallery lightbox
+   ---------------------------------------------------------------------------
+   A native `<dialog>` opened with `showModal()`. The browser then owns the top
+   layer, the inert curtain over the page, and the focus trap — so this block
+   only has to style the surface and the backdrop. The previous hand-rolled
+   `role="dialog"` + manual `inert` was an approximation of all of it.
+
+   `[open]` is used rather than a class because the element is rendered
+   unconditionally and visibility is a property of the element's own state.
+   =========================================================================== */
+
+.gallery-dialog {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  overscroll-behavior: contain;
+}
+
+.gallery-dialog::backdrop {
+  background: var(--color-ink);
+}
+
+/* A centred panel on a desktop, where a full-bleed black page for one photo
+   reads as a navigation rather than a lightbox. */
+@media (min-width: 768px) {
+  .gallery-dialog {
+    width: min(64rem, calc(100vw - 4rem));
+    height: min(46rem, calc(100svh - 4rem));
+    margin: auto;
+    border: 1px solid var(--color-line-dark);
+  }
+
+  .gallery-dialog::backdrop {
+    background: color-mix(in srgb, var(--color-ink) 88%, transparent);
+    backdrop-filter: blur(4px);
+  }
 }
 
 /* ===========================================================================
@@ -370,6 +730,25 @@
 .btn--on-dark:focus-visible {
   color: var(--color-ink);
   border-color: var(--color-paper);
+}
+
+/* Filled white button, for a light-on-dark hero that is *not* full-bleed dark.
+   The editorial hero sits on white, so its primary action inverts: white text
+   on a hairline would disappear into the page. */
+.btn--paper {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+  color: var(--color-paper);
+}
+
+.btn--paper::before {
+  background: var(--color-accent);
+}
+
+.btn--paper:hover,
+.btn--paper:focus-visible {
+  color: var(--color-paper);
+  border-color: var(--color-accent);
 }
 
 .btn__arrow {

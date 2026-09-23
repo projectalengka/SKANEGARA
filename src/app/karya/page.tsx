@@ -40,10 +40,15 @@ export default async function WorksPage() {
           {works.length === 0 ? (
             <EmptyState
               title="Belum ada karya siswa."
-              body="Karya yang Anda tambahkan melalui Dasbor akan tampil di halaman ini."
+              body="Karya yang ditambahkan melalui Dasbor akan tampil di halaman ini."
               action={
-                <Link href="/admin/masuk" className="btn btn--solid">
-                  Masuk ke Dasbor
+                // This is a public page read by prospective students and their
+                // parents. The empty-state button used to send them to
+                // `/admin/masuk` — an invitation to log into the school's CMS,
+                // which is the wrong audience and needlessly advertises the
+                // admin route. Send them somewhere useful instead.
+                <Link href="/program-keahlian" className="btn btn--solid">
+                  Lihat Program Keahlian
                   <span className="btn__arrow" aria-hidden="true">
                     →
                   </span>
@@ -55,7 +60,7 @@ export default async function WorksPage() {
               {[...categories.entries()].map(([category, items]) => (
                 <section key={category} aria-label={`Karya ${category}`}>
                   <div className="flex items-baseline justify-between gap-6 border-b border-[var(--color-line)] pb-4">
-                    <h2 className="display text-[clamp(1.75rem,5vw,3rem)] leading-none">{category}</h2>
+                    <h2 className="display text-[length:var(--step-5)] leading-none">{category}</h2>
                     <span className="label shrink-0 text-[var(--color-text-muted)]">
                       {String(items.length).padStart(2, '0')} karya
                     </span>
@@ -67,7 +72,11 @@ export default async function WorksPage() {
                         <figure>
                           <div className="relative aspect-4/5 overflow-hidden" data-image-reveal>
                             <Image
-                              src={work.image}
+                              // A row saved without an image would make
+                              // `next/image` throw at render ("missing required
+                              // src") and take the whole page down. Programmes
+                              // already guard this; works did not.
+                              src={work.image || '/images/program-placeholder.svg'}
                               alt={work.title}
                               fill
                               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -77,7 +86,7 @@ export default async function WorksPage() {
                           </div>
 
                           <figcaption className="mt-4 border-t border-[var(--color-line)] pt-4">
-                            <p className="display text-[1.25rem]">{work.title}</p>
+                            <p className="display text-[length:var(--step-2)]">{work.title}</p>
                             {/* The student's name is only shown when it is
                                 actually recorded. An empty line reads as a bug;
                                 omitting the row reads as a choice. */}
@@ -88,7 +97,7 @@ export default async function WorksPage() {
                               </p>
                             ) : null}
                             {work.description ? (
-                              <p className="mt-3 text-[0.9375rem] text-[var(--color-text-muted)]">
+                              <p className="mt-3 text-[length:var(--step-0)] text-[var(--color-text-muted)]">
                                 {work.description}
                               </p>
                             ) : null}

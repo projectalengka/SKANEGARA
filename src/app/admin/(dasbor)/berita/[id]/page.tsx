@@ -5,6 +5,7 @@ import { AdminHeading, AdminPanel } from '@/components/admin/AdminShell';
 import { NewsForm } from '@/components/admin/managers/NewsManager';
 import { saveNews } from '@/app/admin/content-actions';
 import { DeleteNewsButton } from '@/components/admin/managers/DeleteNewsButton';
+import { formatDateId } from '@/lib/utils';
 
 export const metadata = { title: 'Ubah Berita' };
 export const dynamic = 'force-dynamic';
@@ -29,7 +30,12 @@ export default async function EditNewsPage({ params }: { params: Promise<{ id: s
       <AdminHeading
         eyebrow="Berita"
         title="Ubah Berita"
-        description={`Terakhir diperbarui: ${new Date(article.createdAt).toLocaleDateString('id-ID')}`}
+        // This read `Terakhir diperbarui` while formatting `createdAt`. There is
+        // no `updatedAt` column on News, so the label was simply wrong — it told
+        // the administrator the article had been edited when it had only been
+        // created. Showing the publication date (or creation, for a draft) is
+        // both accurate and the date they actually care about.
+        description={`${article.published ? 'Terbit' : 'Draf'} · ${formatDateId(article.publishedAt ?? article.createdAt)}`}
         action={
           <Link href="/admin/berita" className="btn btn--ghost">
             ← Kembali

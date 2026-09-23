@@ -49,6 +49,7 @@ export default async function SchoolProfilePage() {
 
       <div id="program" className="mt-12 scroll-mt-8">
         <AdminHeading
+          level={2}
           eyebrow="Konten"
           title="Program Keahlian"
           description="Tambah, ubah, terbitkan, atau sembunyikan program keahlian."

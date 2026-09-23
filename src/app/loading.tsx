@@ -17,18 +17,29 @@ export default function Loading() {
       <span className="sr-only">{ui.loading}</span>
       <span
         aria-hidden="true"
-        className="block h-full w-1/3 bg-[var(--color-accent)]"
-        style={{ animation: 'loading-bar 1.4s var(--ease-in-out) infinite' }}
+        className="loading-bar block h-full w-1/3 bg-[var(--color-accent)]"
       />
       <style>{`
         @keyframes loading-bar {
           0% { transform: translate3d(-100%, 0, 0); }
           100% { transform: translate3d(400%, 0, 0); }
         }
+        .loading-bar {
+          animation: loading-bar 1.4s var(--ease-in-out) infinite;
+        }
         @media (prefers-reduced-motion: reduce) {
           /* A moving bar is exactly the kind of thing reduced motion is asking
-             about, so it stops and becomes a static mark instead. */
-          [style*='loading-bar'] { animation: none !important; width: 100%; opacity: 0.4; }
+             about, so it stops and becomes a static mark instead.
+
+             This used to be an attribute-substring selector keyed on the
+             animation name appearing in the inline style attribute. It worked,
+             but only by coincidence — a class is what was meant, and it cannot
+             be broken by moving the declaration elsewhere. */
+          .loading-bar {
+            animation: none !important;
+            width: 100%;
+            opacity: 0.4;
+          }
         }
       `}</style>
     </div>

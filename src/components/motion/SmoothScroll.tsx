@@ -2,94 +2,67 @@
 
 import { useEffect } from 'react';
 
-/**
- * Smooth scrolling.
- *
- * Lenis with `duration` + an explicit expo-out, deliberately not `lerp`.
- * `lerp` is evaluated per frame, so the same wheel input travels measurably
- * further per second on a 144 Hz display than on a 60 Hz laptop — which means
- * the scroll feel would be a property of the visitor's hardware. `duration` is
- * wall-clock, so it feels the same everywhere.
- *
- * Three gates, in this order:
- *
- *  1. `prefers-reduced-motion: reduce` — never start. Vestibular disorders are
- *     real and hijacking the scroll wheel is the most common way a site hurts
- *     someone. Not "slower": absent.
- *  2. Touch (`pointer: coarse`) — never start. Native momentum scrolling on a
- *     phone is better than anything a library produces, and fighting it is the
- *     classic way to make a site feel broken on mobile.
- *  3. Everything else — start, and hand the instance to GSAP's ticker so the
- *     scroll position is updated once per frame in the same place as every
- *     ScrollTrigger calculation. Two independent rAF loops is how scroll-linked
- *     animations end up one frame behind the scroll itself.
- */
+/** Desktop-only enhancement; touch and reduced motion keep native scrolling. */
 export function SmoothScroll() {
   useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    if (window.matchMedia('(pointer: coarse)').matches) return;
-
-    let lenis: { raf: (time: number) => void; destroy: () => void } | null = null;
-    let frame = 0;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const coarse = window.matchMedia('(pointer: coarse)');
     let cancelled = false;
+    let generation = 0;
+    let dispose: (() => void) | undefined;
 
-    const start = async () => {
-      // Both libraries are loaded lazily. Neither is needed for the first paint,
-      // and neither is needed at all for a visitor with reduced motion or a
-      // phone — so neither should be in the initial bundle.
-      const [{ default: Lenis }, { gsap, ScrollTrigger }] = await Promise.all([
-        import('lenis'),
-        import('gsap').then(async (module) => {
-          const { ScrollTrigger: ST } = await import('gsap/ScrollTrigger');
-          module.gsap.registerPlugin(ST);
-          return { gsap: module.gsap, ScrollTrigger: ST };
-        }),
-      ]);
-
-      if (cancelled) return;
-
-      const instance = new Lenis({
-        duration: 1.05,
-        // Expo-out: leaves quickly, settles slowly. A symmetric ease here is what
-        // makes a site feel like it is lagging rather than gliding.
-        easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-        smoothWheel: true,
-        // Horizontal scrolling is never smoothed: a horizontally scrollable
-        // element (a gallery rail, a table) must keep its native behaviour where
-        // a trackpad gesture and a shift-wheel mean different things.
-        syncTouch: false,
-        wheelMultiplier: 1,
-        touchMultiplier: 1.6,
-      });
-
-      lenis = instance;
-
-      const tick = (time: number) => {
-        instance.raf(time);
-      };
-
-      gsap.ticker.add(tick);
-      gsap.ticker.lagSmoothing(0);
-
-      // ScrollTrigger has to be told that the scroll position is now controlled
-      // by something other than the browser, or every trigger fires against a
-      // stale `scrollY`.
-      const onScroll = () => ScrollTrigger.update();
-      instance.on('scroll', onScroll);
-
-      frame = requestAnimationFrame(() => ScrollTrigger.refresh());
+    const configure = async () => {
+      const current = ++generation;
+      dispose?.();
+      dispose = undefined;
+      if (reduced.matches || coarse.matches) return;
+      try {
+        const [{ default: Lenis }, { gsap }, { ScrollTrigger }] = await Promise.all([
+          import('lenis'), import('gsap'), import('gsap/ScrollTrigger'),
+        ]);
+        if (cancelled || current !== generation) return;
+        gsap.registerPlugin(ScrollTrigger);
+        const instance = new Lenis({
+          // Explicitly disable default lerp: duration owns the wheel's settling time.
+          lerp: 0, duration: 0.8,
+          easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+          smoothWheel: true, syncTouch: false, autoRaf: false, anchors: true,
+        });
+        // GSAP reports seconds; Lenis requires milliseconds. Omitting this
+        // conversion made a 600px wheel gesture move only 9px in two seconds.
+        const tick = (seconds: number) => instance.raf(seconds * 1000);
+        const onScroll = () => ScrollTrigger.update();
+        const stop = () => instance.stop();
+        const start = () => instance.start();
+        instance.on('scroll', onScroll);
+        gsap.ticker.add(tick);
+        document.addEventListener('site:scroll-lock', stop);
+        document.addEventListener('site:scroll-unlock', start);
+        if (document.body.hasAttribute('data-scroll-locked')) stop();
+        const frame = requestAnimationFrame(() => ScrollTrigger.refresh());
+        dispose = () => {
+          cancelAnimationFrame(frame);
+          document.removeEventListener('site:scroll-lock', stop);
+          document.removeEventListener('site:scroll-unlock', start);
+          gsap.ticker.remove(tick);
+          instance.off('scroll', onScroll);
+          instance.destroy();
+        };
+      } catch {
+        // A failed optional chunk must never disable the browser's native scroll.
+      }
     };
-
-    void start();
-
+    const onChange = () => { void configure(); };
+    onChange();
+    reduced.addEventListener('change', onChange);
+    coarse.addEventListener('change', onChange);
     return () => {
       cancelled = true;
-      cancelAnimationFrame(frame);
-      // `destroy` restores native scrolling, so a hot reload in development does
-      // not stack two instances on top of each other.
-      lenis?.destroy();
+      generation += 1;
+      reduced.removeEventListener('change', onChange);
+      coarse.removeEventListener('change', onChange);
+      dispose?.();
     };
   }, []);
-
   return null;
 }

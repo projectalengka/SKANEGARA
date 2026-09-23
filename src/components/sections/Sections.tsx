@@ -54,7 +54,7 @@ function SectionHeading({
       <div className="lg:col-span-9">
         <h2
           id={id}
-          className="display text-[clamp(2.25rem,7.5vw,5.5rem)] leading-[0.9]"
+          className="display text-[length:var(--step-7)] leading-[0.9]"
           data-reveal
         >
           {lines.map((line, lineIndex) => (
@@ -260,7 +260,7 @@ export function StudentWorkSection({
                     />
                   </div>
                   <figcaption className="mt-5 flex items-baseline justify-between gap-6 border-t border-[var(--color-line)] pt-4">
-                    <span className="display text-[1.35rem]">{work.title}</span>
+                    <span className="display text-[length:var(--step-3)]">{work.title}</span>
                     <span className="label shrink-0 text-[var(--color-text-muted)] transition-colors duration-500 group-hover:text-[var(--color-accent)]">
                       {work.category}
                     </span>
@@ -312,10 +312,13 @@ export function NewsSection({
           <div className="mt-16 border-t border-[var(--color-line)] pt-10" data-reveal>
             <p className="text-[var(--color-text-muted)]">Belum ada berita.</p>
             <p className="mt-3 max-w-lg text-[var(--color-text-muted)]">
-              Berita yang Anda terbitkan melalui Dasbor akan muncul di bagian ini secara otomatis.
+              Berita terbaru dari sekolah akan tampil di bagian ini begitu diterbitkan.
             </p>
-            <Link href="/admin/masuk" className="link-line mt-6 inline-flex">
-              Masuk ke Dasbor
+            {/* The visitor is not the administrator. Sending them to the login
+                form was both the wrong audience and a free hint about where the
+                CMS lives. */}
+            <Link href="/kontak" className="link-line mt-6 inline-flex">
+              Hubungi Kami
               <span aria-hidden="true">→</span>
             </Link>
           </div>
@@ -347,7 +350,7 @@ export function NewsSection({
                     </time>
                   </div>
 
-                  <h3 className="display mt-4 text-[clamp(1.75rem,4.5vw,3rem)] leading-[1.02]">
+                  <h3 className="display mt-4 text-[length:var(--step-5)] leading-[1.02]">
                     {lead.title}
                   </h3>
                   <p className="mt-4 max-w-xl text-[var(--color-text-muted)]">
@@ -375,7 +378,7 @@ export function NewsSection({
                           {formatDateId(item.publishedAt ?? item.createdAt)}
                         </time>
                       </div>
-                      <h3 className="display mt-3 text-[1.5rem] leading-[1.1] transition-colors duration-500 group-hover:text-[var(--color-accent)]">
+                      <h3 className="display mt-3 text-[length:var(--step-3)] leading-[1.1] transition-colors duration-500 group-hover:text-[var(--color-accent)]">
                         {item.title}
                       </h3>
                     </Link>
@@ -416,7 +419,7 @@ export function CtaSection({
 
         <h2
           id="judul-ajakan"
-          className="display mt-10 text-[clamp(3rem,14vw,11rem)] leading-[0.84]"
+          className="display mt-10 text-[length:var(--step-7)] leading-[0.84]"
           data-reveal
         >
           {lines.map((line, index) => (

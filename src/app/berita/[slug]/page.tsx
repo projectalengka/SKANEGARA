@@ -3,7 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getNews, getNewsBySlug, getSchoolProfile } from '@/lib/content';
-import { formatDateId, readingMinutes, siteUrl } from '@/lib/utils';
+import { absoluteUrl, formatDateId, readingMinutes, siteUrl } from '@/lib/utils';
 import { ui } from '@/data/defaults';
 
 /**
@@ -113,7 +113,11 @@ export default async function NewsDetailPage({
     datePublished: published,
     dateModified: published,
     articleSection: article.category,
-    image: article.coverImage ? [`${siteUrl()}${article.coverImage}`] : undefined,
+    // Schema.org wants an absolute URL. The cover can be either a local seed
+    // asset (`/images/…`) or a fully-qualified Cloudinary URL — and blindly
+    // prefixing produced `https://site.comhttps://res.cloudinary.com/…` for
+    // every uploaded image. `absoluteUrl()` already knows how to join the two.
+    image: article.coverImage ? [absoluteUrl(article.coverImage)] : undefined,
     author: { '@type': 'Organization', name: profile.schoolName },
     publisher: {
       '@type': 'EducationalOrganization',
@@ -159,12 +163,12 @@ export default async function NewsDetailPage({
               </span>
             </div>
 
-            <h1 className="display mt-6 max-w-5xl text-[clamp(2.25rem,7.5vw,5.5rem)] leading-[0.92]">
+            <h1 className="display mt-6 max-w-5xl text-[length:var(--step-7)] leading-[0.92]">
               {article.title}
             </h1>
 
             {article.excerpt ? (
-              <p className="prose-body mt-8 !text-[1.25rem]">{article.excerpt}</p>
+              <p className="prose-body mt-8 !text-[length:var(--step-2)]">{article.excerpt}</p>
             ) : null}
           </div>
         </header>
@@ -197,7 +201,7 @@ export default async function NewsDetailPage({
             </div>
 
             <div className="lg:col-span-8 lg:col-start-5">
-              <div className="max-w-2xl text-[1.0625rem] text-[var(--color-text)]">
+              <div className="max-w-2xl text-[length:var(--step-1)] text-[var(--color-text)]">
                 {renderBody(article.content)}
               </div>
             </div>
@@ -221,7 +225,7 @@ export default async function NewsDetailPage({
                     >
                       {formatDateId(item.publishedAt ?? item.createdAt)}
                     </time>
-                    <h3 className="display mt-3 text-[1.35rem] leading-[1.15] transition-colors duration-500 group-hover:text-[var(--color-accent)]">
+                    <h3 className="display mt-3 text-[length:var(--step-3)] leading-[1.15] transition-colors duration-500 group-hover:text-[var(--color-accent)]">
                       {item.title}
                     </h3>
                   </Link>

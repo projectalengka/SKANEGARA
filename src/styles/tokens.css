@@ -30,6 +30,7 @@
      ---------------------------------------------------------------------- */
   --color-accent: #c8341f;
   --color-accent-deep: #9c2716;
+  --color-accent-on-dark: #f18570;
 
   /* -- Type ---------------------------------------------------------------
      One family, two weights. The headline and the body copy share a skeleton,
@@ -77,17 +78,129 @@
 }
 
 /* Type scale — fluid, but clamped so a 1920px monitor does not get a 300px
-   headline, and a 320px phone does not get one that has to wrap mid-word. */
+   headline, and a 320px phone does not get one that has to wrap mid-word.
+
+   THE RULE THAT MAKES THIS A SCALE AND NOT A PILE OF NUMBERS
+   ---------------------------------------------------------
+   Every step is a fixed multiple (~1.15) of the one below it, at *both* ends
+   of the fluid range. That is the whole trick. The previous version was nine
+   ad-hoc clamps: they happened to look fine individually, but side by side they
+   produced 33 distinct sizes across the codebase, eight of which were within
+   2% of each other — visually identical, so the hierarchy had a rung that did
+   nothing except make the next rung harder to read.
+
+   The step names are not decoration either. --step--2 is the label, --step-0
+   is body copy, --step-6 is a section headline, --step-8 is the hero. Read the
+   name and you know the job.
+
+   The fluid window is 400px → 1440px. Below 400px nothing shrinks further
+   (phones are narrow but text has a floor), above 1440px nothing grows further
+   (otherwise a 2560px display gets a hero so large it stops being a headline
+   and becomes a texture). Because every step shares that same window, the
+   *ratio* between steps is stable at every width — hero-to-body runs 5.6× on a
+   phone and 9.5× on a desktop, which is deliberate: more screen deserves more
+   drama, and the smallest text simply cannot shrink to match.
+
+   HOW THE vw COEFFICIENT IS DERIVED — read this before changing a number
+   ---------------------------------------------------------------------
+   The preferred term is `A + B·vw`, and it has to satisfy two anchors. The
+   units are the whole difficulty, so state them explicitly: in CSS `rem` and
+   `vw` are scaled by DIFFERENT things.
+
+       A (rem) → the browser multiplies by the root font size, 16px
+       B (vw)  → the browser multiplies by viewport/100
+
+   So the preferred term in pixels is `A·16 + B·(viewport/100)`. Writing the
+   viewport as `u` (= viewport/100, so u = 4.0 at 400px and 14.4 at 1440px),
+   the two anchors are:
+
+       A·16 + B·4.0  = minPx      (400px)
+       A·16 + B·14.4 = maxPx      (1440px)
+
+   Note that `A·16` always travels together, so what is really being solved
+   for is the constant `K = A·16`, in pixels:
+
+       B    = (maxPx − minPx) / 10.4     [px per vw-unit]
+       K    = minPx − B · 4.0            [px]
+       A    = K / 16                     [rem]
+
+   The 10.4 is just 14.4 − 4.0, i.e. the fluid window expressed in vw. DO NOT
+   divide B by 16 — that is the mistake this note exists to prevent, and it
+   has now been made twice. Dividing B by 16 makes the preferred term top out
+   at `minPx + (maxPx−minPx)/16` px, which is far below the ceiling, so clamp
+   pins to its MINIMUM at EVERY width. The hero then renders at its 47px phone
+   size on a 1440px monitor and looks merely "restrained" rather than broken.
+   (The opposite error — B 16× too large — pins to the MAXIMUM everywhere, and
+   puts a 104px hero on a 320px phone.)
+
+   Three checks that do NOT catch either failure, all of which passed while the
+   file was wrong:
+     1. Evaluating the preferred term at vw=MAX_VW and comparing it to maxRem.
+        It overshoots and is clamped back down to maxRem, so it passes for ANY
+        B — the check is a tautology.
+     2. Re-deriving A and B with the same formula you just wrote. Algebraically
+        self-consistent, so it agrees with itself at any level of wrongness.
+        (This one is especially treacherous here: `render()` and `solve()` once
+        shared the same unit error, so the printed table looked perfect while
+        the emitted CSS was off by 16×.)
+     3. Reading the computed style of an element that *uses* the step — that
+        also reads the clamped result, so it hides the same failure.
+
+   The check that does work, and the only one kept: substitute real viewport
+   numbers and confirm the preferred term touches EXACTLY minPx at 400px and
+   EXACTLY maxPx at 1440px, then that every step MOVES between them.
+   outputs/audit/type-scale-final.cjs does both and exits non-zero otherwise.
+   To settle a disagreement between arithmetic and the browser, measure the
+   browser directly — probe-clamp-math.cjs reports what `calc(A + Bvw)` and
+   `1vw` actually resolve to, which is what exposed the factor of 16.
+
+   THE FLOORS IN THE UPPER HALF ARE SOLVED AS ONE SYSTEM
+   -----------------------------------------------------
+   Lowering a single floor just moves the collision to the rung beneath it:
+   48/48 → 44/48 → 40/40, each one tying with its neighbour. The reason is that
+   the upper floors were packed too tightly to hold a ratio at all. So the four
+   rungs from --step-5 to --step-8 are spaced geometrically inside an interval
+   that measurement fixes at both ends:
+
+       lower bound  26px  — --step-4's floor, already verified safe
+       upper bound  47px  — "Keterampilan" fits up to 279.1px at 47px
+
+       r = (47/26)^(1/4) = 1.1595   →   26, 30.2, 35.0, 40.5, 47
+       rounded                      →   26, 30,   35,   41,   47
+
+   Every adjacent pair now sits between ×1.146 and ×1.171 at 320px — uniform
+   by construction rather than re-tuned by hand each time one number moved.
+   The ceilings never changed (32, 44, 60, 80, 104), so desktop is unaffected;
+   only narrow-screen sizes differ. outputs/audit/type-scale-final.cjs derives
+   this and exits non-zero if any step stalls or any pair falls below 1.06.
+
+   THE ONE MEASURED CONSTRAINT: the top floor is 47px, not 48px. "Keterampilan"
+   in the homepage hero is the longest word actually rendered at --step-8 — it
+   measures 285px at 48px against 280px of usable width, so the final "n" was
+   clipped. The clip is invisible because that line lives inside a line-mask
+   with `overflow: hidden`; only an element screenshot shows it. At 47px the
+   word is 279.1px. Two other candidates that looked like the same bug were
+   proven probe artifacts, not defects: the footer wordmark ("SMK" stacked over
+   "Jayanegara") and headings with a <br> ("Agenda" + "sekolah.") — textContent
+   glues their lines into a phantom word, while the browser wraps them normally.
+   See outputs/audit/probe-hero-source.cjs and probe-floor-dump.cjs. */
 :root {
-  --step--2: clamp(0.625rem, 0.6rem + 0.12vw, 0.6875rem);
-  --step--1: clamp(0.75rem, 0.72rem + 0.14vw, 0.8125rem);
-  --step-0: clamp(0.9375rem, 0.9rem + 0.2vw, 1rem);
-  --step-1: clamp(1.125rem, 1.05rem + 0.35vw, 1.3125rem);
-  --step-2: clamp(1.375rem, 1.2rem + 0.75vw, 1.75rem);
-  --step-3: clamp(1.75rem, 1.4rem + 1.6vw, 2.75rem);
-  --step-4: clamp(2.25rem, 1.5rem + 3.4vw, 4.5rem);
-  --step-5: clamp(2.75rem, 1.3rem + 6.6vw, 8rem);
-  --step-6: clamp(3.25rem, 0.6rem + 12vw, 13rem);
+  --step--2: clamp(0.625rem, 0.601rem + 0.0962vw, 0.6875rem); /* 10 → 11px  label */
+  --step--1: clamp(0.75rem, 0.726rem + 0.0962vw, 0.8125rem); /* 12 → 13px  meta */
+  --step-0: clamp(0.875rem, 0.851rem + 0.0962vw, 0.9375rem); /* 14 → 15px  body */
+  --step-1: clamp(1rem, 0.9519rem + 0.1923vw, 1.125rem); /* 16 → 18px  lead */
+  --step-2: clamp(1.125rem, 1.0529rem + 0.2885vw, 1.3125rem); /* 18 → 21px  card title */
+  --step-3: clamp(1.3125rem, 1.2163rem + 0.3846vw, 1.5625rem); /* 21 → 25px  subhead */
+  --step-4: clamp(1.625rem, 1.4808rem + 0.5769vw, 2rem); /* 26 → 32px  heading */
+  --step-5: clamp(1.875rem, 1.5385rem + 1.3462vw, 2.75rem); /* 30 → 44px  section */
+  --step-6: clamp(2.1875rem, 1.5865rem + 2.4038vw, 3.75rem); /* 35 → 60px  page title */
+  --step-7: clamp(2.5625rem, 1.625rem + 3.75vw, 5rem); /* 41 → 80px  feature */
+  /* 47px floor, set by "Keterampilan" — the longest word actually rendered at
+     this rung, in the homepage hero. It measures 279.1px at 47px against 280px
+     of usable width, so 48px clipped the final "n". The clip is silent because
+     the line sits inside a line-mask with `overflow: hidden`. The 104px ceiling
+     is untouched, so desktop hero weight is unchanged. */
+  --step-8: clamp(2.9375rem, 1.5673rem + 5.4808vw, 6.5rem); /* 47 → 104px hero */
 
   --section-y: clamp(5rem, 3rem + 9vw, 12rem);
   --nav-h: 4.5rem;

@@ -1,12 +1,23 @@
 /**
- * Cache tags.
+ * Cache tags, and the dashboard navigation.
  *
- * Extracted into their own module because of a hard constraint in Next.js: a
- * module marked `'use server'` may only export async functions, so the tag
- * constants cannot live alongside the actions that use them. Sharing them from
- * one file is what keeps `revalidateTag('berita')` in the actions and
- * `cacheTag('berita')` in the reads from drifting apart — and a drifted tag is a
- * silent bug where an edit simply never appears.
+ * ## Why these are literals and not imported from `@/lib/content`
+ *
+ * The obvious de-duplication — re-export the tag strings from the module that
+ * applies them with `cacheTag` — is a build-breaking mistake, and it is worth
+ * recording why so nobody "fixes" it back.
+ *
+ * This module is imported by `AdminShell`, which is a **client** component (it
+ * needs the active path and the mobile menu state). `@/lib/content` imports
+ * `@/lib/db`, which imports the `pg` driver for its connection pool. Pulling
+ * that chain into a client component makes webpack try to bundle Node's `net`
+ * and `tls` into the browser bundle, and the build fails with
+ * `Module not found: Can't resolve 'net'`.
+ *
+ * So the tags stay literals here, and `tests/content.test.ts` asserts that this
+ * object and the `tags` object in `@/lib/content` are equal key by key. That
+ * test is the guard against drift — it is checked by the quality gate on every
+ * run, which an import could not be without breaking the browser build.
  */
 export const mainTags = {
   profile: 'profil',

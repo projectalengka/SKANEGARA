@@ -82,7 +82,7 @@ export function StudentWorkManager({ works }: { works: WorkContent[] }) {
 
       {creating ? (
         <div className="mb-8 border border-[var(--color-ink)] bg-[var(--color-paper)] px-6 py-7">
-          <h2 className="display text-[1.5rem]">Karya Baru</h2>
+          <h2 className="display text-[length:var(--step-3)]">Karya Baru</h2>
           <div className="mt-6">
             <ActionForm
               action={saveStudentWork}

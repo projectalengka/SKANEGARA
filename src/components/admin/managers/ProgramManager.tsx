@@ -72,8 +72,8 @@ export function ProgramManager({ programs }: { programs: ProgramContent[] }) {
 
       {creating ? (
         <div className="mb-8 border border-[var(--color-ink)] bg-[var(--color-paper)] px-6 py-7">
-          <h2 className="display text-[1.5rem]">Program Baru</h2>
-          <p className="mt-2 text-[0.9375rem] text-[var(--color-text-muted)]">
+          <h2 className="display text-[length:var(--step-3)]">Program Baru</h2>
+          <p className="mt-2 text-[length:var(--step-0)] text-[var(--color-text-muted)]">
             Isi nama program, lalu simpan. Deskripsi dan gambar dapat dilengkapi setelahnya.
           </p>
 
@@ -162,7 +162,7 @@ export function ProgramManager({ programs }: { programs: ProgramContent[] }) {
                     </ActionForm>
 
                     <div className="mt-6 flex items-center justify-between gap-4 border-t border-[var(--color-line)] pt-5">
-                      <p className="text-[0.875rem] text-[var(--color-text-muted)]">
+                      <p className="text-[length:var(--step-0)] text-[var(--color-text-muted)]">
                         Menghapus program juga menghapus gambarnya dari penyimpanan.
                       </p>
                       <DeleteButton action={onDelete(program.id)} onDone={handle} />

@@ -33,6 +33,14 @@ import {
   type WorkContent,
 } from '@/data/defaults';
 import { isDatabaseConfigured, readOrFallback } from './db';
+import {
+  sampleContent,
+  sampleEnabled,
+  sampleProfileCopy,
+  sampleProgramCopy,
+  sampleSectionBodies,
+  sampleSwitch,
+} from '@/data/sample';
 
 /** Dates arrive from Prisma as `Date`, from seeds as `string`. Normalise to ISO. */
 function toIso(value: Date | string | null | undefined): string | null {
@@ -44,6 +52,120 @@ function toIso(value: Date | string | null | undefined): string | null {
 function prefer(dbValue: string | null | undefined, fallback: string): string {
   if (typeof dbValue !== 'string') return fallback;
   return dbValue.trim().length > 0 ? dbValue : fallback;
+}
+
+// ---------------------------------------------------------------------------
+// Sample content
+// ---------------------------------------------------------------------------
+//
+// Sample content exists so the site can be reviewed with real-looking structure
+// before the school's copy is written — see `src/data/sample.ts` for the full
+// reasoning and the honesty mechanism (`[CONTOH]` prefixes).
+//
+// The ordering below matters, and it is the whole design:
+//
+//   database row  >  sample row  >  seed row
+//
+// A database row always wins, because it is the owner's own content. Sample
+// data is a *floor replacement*, never an overlay: it only fills the space
+// while the database has nothing to say. So the moment the owner publishes one
+// real article, that article appears and the sample set stays exactly where it
+// is — dormant, and untouched by `prefer()`, which would otherwise let it leak
+// back in.
+//
+// Every read function in this file is a single `if` away from being
+// sample-free, which is what makes the switch trustworthy.
+
+/**
+ * Swaps a *deliberately empty* fallback for the sample set, when the switch is on.
+ *
+ * Use this only for collections whose seed is empty on purpose — news and
+ * events. For collections that have seed rows (works, gallery), the rows may
+ * have come from the database rather than the fallback, so an empty-check would
+ * never fire. Those read functions test the winning rows themselves instead.
+ *
+ * `sample.length > 0` keeps the contract total: with the switch on and no
+ * sample data to offer, the fallback stands. That is the state the unit tests
+ * exercise, and it means the switch can never make a page emptier than it was.
+ */
+function sampleInsteadOf<T>(fallback: T[], sample: T[]): T[] {
+  if (!sampleEnabled()) return fallback;
+  return sample.length > 0 ? sample : fallback;
+}
+
+/**
+ * Whether a collection is still the untouched seed, rather than the owner's.
+ *
+ * Gallery and work seed rows carry placeholder copy — `[Judul karya Poster —
+ * isi melalui Dasbor Admin]` — so a list in which *every* title is still a
+ * placeholder is seed content, and fair game for the sample set to replace. One
+ * real title anywhere in the list means the owner has started work on it, and
+ * the whole collection is left alone.
+ *
+ * That "whole collection" granularity is deliberate. Mixing a real work with
+ * fifteen `[CONTOH]` ones would put invented and real content side by side in
+ * the same grid, which is exactly the confusion the `[CONTOH]` mark exists to
+ * prevent.
+ */
+function isUneditedSeed(titles: readonly string[]): boolean {
+  return titles.length > 0 && titles.every((title) => isPlaceholderText(title));
+}
+
+/** Applies the sample section bodies on top of the seed section copy. */
+function withSampleSections(
+  sections: Record<string, SectionContent>,
+): Record<string, SectionContent> {
+  if (!sampleEnabled()) return sections;
+
+  const merged: Record<string, SectionContent> = { ...sections };
+  for (const [key, body] of Object.entries(sampleSectionBodies)) {
+    const existing = merged[key];
+    if (!existing) continue;
+    // Only fills copy that is still a placeholder. Real copy — whether typed by
+    // the owner or part of the seed — is never overwritten.
+    if (isPlaceholderText(existing.body)) {
+      merged[key] = { ...existing, body };
+    }
+  }
+  return merged;
+}
+
+/** True when a value is a seed placeholder or empty. Mirrors `isPlaceholder`. */
+function isPlaceholderText(value: string | null | undefined): boolean {
+  if (!value) return true;
+  return value.startsWith('[') || value.trim().length === 0;
+}
+
+/** Applies the sample profile copy to whichever profile fields are unfilled. */
+function withSampleProfile(profile: SchoolProfileContent): SchoolProfileContent {
+  if (!sampleEnabled()) return profile;
+
+  return {
+    ...profile,
+    description: isPlaceholderText(profile.description) ? sampleProfileCopy.description : profile.description,
+    history: isPlaceholderText(profile.history) ? sampleProfileCopy.history : profile.history,
+    vision: isPlaceholderText(profile.vision) ? sampleProfileCopy.vision : profile.vision,
+    mission: profile.mission.every(isPlaceholderText) ? [...sampleProfileCopy.mission] : profile.mission,
+  };
+}
+
+/** Applies the sample programme copy to whichever programme fields are unfilled. */
+function withSamplePrograms(programs: ProgramContent[]): ProgramContent[] {
+  if (!sampleEnabled()) return programs;
+
+  return programs.map((program) => {
+    const sample = sampleProgramCopy[program.slug];
+    if (!sample) return program;
+
+    return {
+      ...program,
+      shortDescription: isPlaceholderText(program.shortDescription)
+        ? sample.shortDescription
+        : program.shortDescription,
+      description: isPlaceholderText(program.description) ? sample.description : program.description,
+      features: program.features.length === 0 ? sample.features : program.features,
+    };
+  });
 }
 
 /**
@@ -96,7 +218,7 @@ export const profileTag = tags.profile;
 // ---------------------------------------------------------------------------
 
 export async function getSchoolProfile(): Promise<SchoolProfileContent> {
-  return readOrFallback(
+  const profile = await readOrFallback(
     'schoolProfile',
     async (prisma) => {
       const row = await prisma.schoolProfile.findFirst({ orderBy: { updatedAt: 'desc' } });
@@ -104,6 +226,8 @@ export async function getSchoolProfile(): Promise<SchoolProfileContent> {
     },
     defaultSchoolProfile,
   );
+
+  return withSampleProfile(profile);
 }
 
 // ---------------------------------------------------------------------------
@@ -115,7 +239,7 @@ export async function getPrograms(options: { includeUnpublished?: boolean } = {}
     ? defaultPrograms
     : defaultPrograms.filter((program) => program.published);
 
-  return readOrFallback(
+  const programs = await readOrFallback(
     'programs',
     async (prisma) => {
       const rows = await prisma.program.findMany({
@@ -139,6 +263,8 @@ export async function getPrograms(options: { includeUnpublished?: boolean } = {}
     },
     fallback,
   );
+
+  return withSamplePrograms(programs);
 }
 
 export async function getProgramBySlug(slug: string): Promise<ProgramContent | null> {
@@ -153,9 +279,11 @@ export async function getProgramBySlug(slug: string): Promise<ProgramContent | n
 export async function getNews(
   options: { includeUnpublished?: boolean; limit?: number } = {},
 ): Promise<NewsContent[]> {
-  const fallback = options.includeUnpublished
-    ? defaultNews
-    : defaultNews.filter((item) => item.published);
+  const sample = sampleContent();
+  const fallback = sampleInsteadOf(
+    options.includeUnpublished ? defaultNews : defaultNews.filter((item) => item.published),
+    sample ? (options.includeUnpublished ? sample.news : sample.news.filter((item) => item.published)) : [],
+  );
 
   const result = await readOrFallback(
     'news',
@@ -164,7 +292,10 @@ export async function getNews(
         where: options.includeUnpublished ? undefined : { published: true },
         orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
       });
-      if (rows.length === 0) return [];
+      // No articles in the database yet: the sample set stands in when it is
+      // switched on, otherwise the honest empty state does. Either way the
+      // database winning is a real article, decided in one place.
+      if (rows.length === 0) return fallback;
 
       return rows.map<NewsContent>((row) => ({
         id: row.id,
@@ -187,7 +318,9 @@ export async function getNews(
 }
 
 export async function getNewsBySlug(slug: string): Promise<NewsContent | null> {
-  const fallback = defaultNews.find((item) => item.slug === slug) ?? null;
+  const sample = sampleContent();
+  const sampleRow = sample ? (sample.news.find((item) => item.slug === slug) ?? null) : null;
+  const fallback = defaultNews.find((item) => item.slug === slug) ?? sampleRow;
 
   return readOrFallback(
     'newsBySlug',
@@ -219,6 +352,25 @@ export async function getNewsBySlug(slug: string): Promise<NewsContent | null> {
 export async function getGallery(
   options: { includeUnpublished?: boolean; limit?: number } = {},
 ): Promise<GalleryContent[]> {
+  const sample = sampleContent();
+  const sampleRows = sample
+    ? options.includeUnpublished
+      ? sample.gallery
+      : sample.gallery.filter((i) => i.published)
+    : [];
+
+  /**
+   * Gallery seed captions are real interface copy, not placeholders.
+   *
+   * `defaultGallery` titles read "Kegiatan Belajar", "Praktik di Workshop" — the
+   * wording the design was specified against. So `isUneditedSeed` correctly
+   * reports `false` for them, and the sample mosaic must **not** replace the
+   * seed here. It is added only when the collection is genuinely absent.
+   *
+   * That asymmetry with works is deliberate, not an oversight: the seed works
+   * are `[Judul karya …]` placeholders and can be replaced; the seed gallery
+   * captions are finished copy and cannot.
+   */
   const fallback = options.includeUnpublished
     ? defaultGallery
     : defaultGallery.filter((item) => item.published);
@@ -230,7 +382,7 @@ export async function getGallery(
         where: options.includeUnpublished ? undefined : { published: true },
         orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
       });
-      if (rows.length === 0) return [];
+      if (rows.length === 0) return sampleRows.length > 0 ? sampleRows : fallback;
 
       return rows.map<GalleryContent>((row) => ({
         id: row.id,
@@ -243,7 +395,7 @@ export async function getGallery(
         published: row.published,
       }));
     },
-    fallback,
+    sampleRows.length > 0 ? sampleRows : fallback,
   );
 
   return options.limit ? result.slice(0, options.limit) : result;
@@ -256,10 +408,31 @@ export async function getGallery(
 export async function getStudentWork(
   options: { includeUnpublished?: boolean; limit?: number } = {},
 ): Promise<WorkContent[]> {
-  const fallback = options.includeUnpublished
+  const sample = sampleContent();
+  const seed = options.includeUnpublished
     ? defaultStudentWork
     : defaultStudentWork.filter((item) => item.published);
+  const sampleRows = sample
+    ? options.includeUnpublished
+      ? sample.studentWork
+      : sample.studentWork.filter((i) => i.published)
+    : [];
 
+  /**
+   * Sample content replaces *unedited* work, wherever that work came from.
+   *
+   * The subtlety this encodes: the seed is not the only source of placeholder
+   * rows. `npm run db:seed` writes the seed into the database, so a connected
+   * installation has six placeholder works *as database rows* — and a
+   * fallback-only substitution never fires for them. Measured: `/karya` served
+   * `[Judul karya Poster — isi melalui Dasbor Admin]` from the database while
+   * the sample set sat unused, for exactly this reason.
+   *
+   * So the test is applied to whichever rows actually won, by title. Placeholder
+   * titles mean nobody has edited this collection yet, and the sample set may
+   * stand in. One real title means the owner has started, and every row is left
+   * exactly as it is.
+   */
   const result = await readOrFallback(
     'studentWork',
     async (prisma) => {
@@ -267,9 +440,11 @@ export async function getStudentWork(
         where: options.includeUnpublished ? undefined : { published: true },
         orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
       });
-      if (rows.length === 0) return [];
+      if (rows.length === 0) {
+        return isUneditedSeed(seed.map((item) => item.title)) ? sampleRows : seed;
+      }
 
-      return rows.map<WorkContent>((row) => ({
+      const mapped = rows.map<WorkContent>((row) => ({
         id: row.id,
         title: row.title,
         studentName: row.studentName,
@@ -281,8 +456,10 @@ export async function getStudentWork(
         order: row.order,
         published: row.published,
       }));
+
+      return isUneditedSeed(mapped.map((item) => item.title)) && sampleRows.length > 0 ? sampleRows : mapped;
     },
-    fallback,
+    isUneditedSeed(seed.map((item) => item.title)) && sampleRows.length > 0 ? sampleRows : seed,
   );
 
   return options.limit ? result.slice(0, options.limit) : result;
@@ -295,9 +472,15 @@ export async function getStudentWork(
 export async function getEvents(
   options: { includeUnpublished?: boolean; limit?: number; upcomingOnly?: boolean } = {},
 ): Promise<EventContent[]> {
-  const fallback = options.includeUnpublished
-    ? defaultEvents
-    : defaultEvents.filter((item) => item.published);
+  const sample = sampleContent();
+  const fallback = sampleInsteadOf(
+    options.includeUnpublished ? defaultEvents : defaultEvents.filter((item) => item.published),
+    sample
+      ? options.includeUnpublished
+        ? sample.events
+        : sample.events.filter((item) => item.published)
+      : [],
+  );
 
   const result = await readOrFallback(
     'events',
@@ -309,7 +492,7 @@ export async function getEvents(
         },
         orderBy: { date: options.upcomingOnly ? 'asc' : 'desc' },
       });
-      if (rows.length === 0) return [];
+      if (rows.length === 0) return fallback;
 
       return rows.map<EventContent>((row) => ({
         id: row.id,
@@ -335,7 +518,7 @@ export async function getEvents(
 // ---------------------------------------------------------------------------
 
 export async function getSections(): Promise<Record<string, SectionContent>> {
-  return readOrFallback(
+  const sections = await readOrFallback(
     'sections',
     async (prisma) => {
       const rows = await prisma.siteSection.findMany();
@@ -364,6 +547,8 @@ export async function getSections(): Promise<Record<string, SectionContent>> {
     },
     defaultSections,
   );
+
+  return withSampleSections(sections);
 }
 
 /** Convenience read for a single section, with the seed row as the floor. */
@@ -384,4 +569,28 @@ export async function getSection(key: string): Promise<SectionContent> {
 /** Diagnostic used by the admin dashboard to report which mode the site is in. */
 export function contentMode(): 'database' | 'seed' {
   return isDatabaseConfigured() ? 'database' : 'seed';
+}
+
+/**
+ * Whether sample content is currently being served.
+ *
+ * Exported so the dashboard can warn the owner that what they are looking at is
+ * `[CONTOH]` filler rather than their own copy. A switch that changes what the
+ * public site shows, without saying so anywhere in the UI, would be worse than
+ * no switch at all.
+ */
+export function sampleMode(): boolean {
+  return sampleEnabled();
+}
+
+/**
+ * The raw `SAMPLE_DATA` value as this process sees it, for the dashboard.
+ *
+ * Exists purely so a misconfigured switch is diagnosable. `sampleEnabled()`
+ * collapses every non-`on` value to `false`, which is the correct behaviour but
+ * throws away the distinction between "off" and "I typed `On`". The dashboard
+ * shows the difference; nothing on the public site depends on it.
+ */
+export function sampleRawValue(): string | undefined {
+  return sampleSwitch().raw;
 }

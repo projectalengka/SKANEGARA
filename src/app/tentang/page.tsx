@@ -36,7 +36,7 @@ export default async function AboutPage() {
               </h2>
             </div>
             <div className="lg:col-span-9">
-              <p className="prose-body !text-[1.25rem] !text-[var(--color-text)]" data-reveal>
+              <p className="prose-body !text-[length:var(--step-2)] !text-[var(--color-text)]" data-reveal>
                 {profile.history}
               </p>
             </div>
@@ -45,7 +45,12 @@ export default async function AboutPage() {
           <div className="relative mt-16 aspect-16/9 overflow-hidden lg:mt-24" data-image-reveal>
             <Image
               src="/images/hero.svg"
-              alt={`Kegiatan di ${profile.schoolName}`}
+              // The alt used to claim this was a photograph of activity at the
+              // school. It is a drawn placeholder, and an alt text that
+              // describes an imaginary photograph is a factual claim made to
+              // every screen reader user. `alt=""` marks it as decorative,
+              // which is what it honestly is.
+              alt=""
               fill
               sizes="100vw"
               className="object-cover"
@@ -60,7 +65,7 @@ export default async function AboutPage() {
               <p className="label text-[var(--color-accent)]" data-reveal>
                 02
               </p>
-              <h2 className="display mt-5 text-[clamp(2rem,5vw,3.25rem)] leading-[0.95]" data-reveal>
+              <h2 className="display mt-5 text-[length:var(--step-5)] leading-[0.95]" data-reveal>
                 Visi &amp;
                 <br />
                 <em>Misi.</em>
@@ -71,7 +76,7 @@ export default async function AboutPage() {
               <h3 className="label text-[var(--color-text-muted)]" data-reveal>
                 Visi
               </h3>
-              <p className="mt-5 text-[1.125rem]" data-reveal>
+              <p className="mt-5 text-[length:var(--step-1)]" data-reveal>
                 {profile.vision}
               </p>
             </div>
@@ -103,7 +108,7 @@ export default async function AboutPage() {
               <p className="label mt-3 text-[var(--color-text-muted)]">Kunjungi</p>
             </div>
             <div className="lg:col-span-9">
-              <h2 className="display text-[clamp(2rem,6vw,4.5rem)] leading-[0.92]" data-reveal>
+              <h2 className="display text-[length:var(--step-6)] leading-[0.92]" data-reveal>
                 Lokasi
                 <br />
                 <em>sekolah.</em>

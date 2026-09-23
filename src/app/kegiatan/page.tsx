@@ -34,7 +34,13 @@ export default async function EventsPage() {
   // the split can get.
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
-  const upcoming = events.filter((event) => new Date(event.date).getTime() >= now);
+  const upcoming = events
+    .filter((event) => new Date(event.date).getTime() >= now)
+    // `getEvents()` orders by date *descending*, which is right for an archive
+    // but wrong for an agenda: "Akan Datang" must read soonest-first, or the
+    // next event someone can actually attend is buried under the ones after it.
+    // The past list keeps the descending order, which is what a history wants.
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const past = events.filter((event) => new Date(event.date).getTime() < now);
 
   return (
@@ -91,7 +97,7 @@ export default async function EventsPage() {
               <p className="label text-[var(--color-accent)]">Agenda</p>
             </div>
             <div className="lg:col-span-9">
-              <h2 className="display text-[clamp(2rem,6vw,4.5rem)] leading-[0.92]">
+              <h2 className="display text-[length:var(--step-6)] leading-[0.92]">
                 Agenda
                 <br />
                 <em>sekolah.</em>
@@ -156,14 +162,14 @@ function EventList({
             <div className="sm:col-span-3">
               <time
                 dateTime={toDateTimeAttribute(event.date)}
-                className={`display block text-[clamp(1.5rem,3.5vw,2.25rem)] leading-none ${muted ? 'text-[var(--color-text-muted)]' : ''}`}
+                className={`display block text-[length:var(--step-4)] leading-none ${muted ? 'text-[var(--color-text-muted)]' : ''}`}
               >
                 {formatDateId(event.date)}
               </time>
             </div>
 
             <div className="sm:col-span-7">
-              <h4 className={`display text-[1.5rem] leading-tight ${muted ? 'text-[var(--color-text-muted)]' : ''}`}>
+              <h4 className={`display text-[length:var(--step-3)] leading-tight ${muted ? 'text-[var(--color-text-muted)]' : ''}`}>
                 {event.title}
               </h4>
               {event.description ? (

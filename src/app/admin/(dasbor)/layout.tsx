@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 import { requireSession } from '@/lib/session';
-import { contentMode } from '@/lib/content';
+import { contentMode, getSchoolProfile, sampleMode, sampleRawValue } from '@/lib/content';
 import { AdminShell } from '@/components/admin/AdminShell';
 
 export const metadata: Metadata = {
   title: {
     default: 'Dasbor',
-    template: '%s — Dasbor SMK Jayanegara',
+    template: '%s — Dasbor',
   },
   // The dashboard must never appear in a search result. `robots.txt` asks
   // politely; this is the directive a crawler must honour.
@@ -28,10 +28,16 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const session = await requireSession('/admin/dasbor');
+  const [session, profile] = await Promise.all([requireSession('/admin/dasbor'), getSchoolProfile()]);
 
   return (
-    <AdminShell email={session.email} mode={contentMode()}>
+    <AdminShell
+      email={session.email}
+      mode={contentMode()}
+      schoolName={profile.schoolName}
+      sample={sampleMode()}
+      sampleRaw={sampleRawValue()}
+    >
       {children}
     </AdminShell>
   );

@@ -38,8 +38,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const newsRoutes: MetadataRoute.Sitemap = news.map((item) => ({
     url: absoluteUrl(`/berita/${item.slug}`),
+    // The one route here with a *real* last-modified date. `now` for every
+    // static route is honest enough (the school can edit any of them at any
+    // time) but for an article the publication date is the fact, so it is used
+    // rather than thrown away.
     lastModified: new Date(item.publishedAt ?? item.createdAt),
-    changeFrequency: 'yearly',
+    // A news article is not yearly content — `yearly` told crawlers the archive
+    // almost never changes, which is the opposite of true for a school that
+    // posts through the term.
+    changeFrequency: 'monthly',
     priority: 0.6,
   }));
 

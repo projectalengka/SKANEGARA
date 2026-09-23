@@ -16,7 +16,7 @@ export default function NotFound() {
       <div className="shell-wide">
         <p className="label text-[var(--color-accent)]">404</p>
 
-        <h1 className="display mt-8 text-[clamp(2.5rem,11vw,8rem)] leading-[0.88]">
+        <h1 className="display mt-8 text-[length:var(--step-8)] leading-[0.88]">
           Halaman
           <br />
           <em>tidak ditemukan.</em>

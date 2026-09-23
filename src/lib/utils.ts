@@ -138,8 +138,18 @@ export function siteUrl(): string {
   return 'http://localhost:3000';
 }
 
-/** Absolute URL for a path, for canonical tags, Open Graph and the sitemap. */
+/**
+ * Absolute URL for a path, for canonical tags, Open Graph and the sitemap.
+ *
+ * Idempotent for values that are already absolute. That case is not
+ * hypothetical: every image the administrator uploads is a fully-qualified
+ * Cloudinary URL, and a bare concatenation turned it into
+ * `https://site.comhttps://res.cloudinary.com/…` — a broken Open Graph image
+ * and a broken `NewsArticle.image`, with nothing thrown to say so. Call sites
+ * can now hand this whatever the content layer gives them.
+ */
 export function absoluteUrl(path: string): string {
+  if (/^https?:\/\//i.test(path)) return path;
   return `${siteUrl()}${path.startsWith('/') ? path : `/${path}`}`;
 }
 

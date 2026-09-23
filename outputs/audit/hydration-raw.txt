@@ -1,0 +1,45 @@
+A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>
+      <LoadingBoundary name="tentang/" loading={null}>
+        <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>
+          <RedirectBoundary>
+            <RedirectErrorBoundary router={{...}}>
+              <InnerLayoutRouter url="/tentang" tree={[...]} params={{}} cacheNode={{rsc:{...}, ...}} segmentPath={[...]} ...>
+                <SegmentViewNode type="page" pagePath="tentang/pa...">
+                  <SegmentTrieNode>
+                  <AboutPage>
+                    <header>
+                    <section className="section-y">
+                      <div className="shell-wide">
+                        <div className="grid gap-1...">
+                          <div className="lg:col-span-3">
+                            <h2
+                              className="label text-[var(--color-text-muted)]"
+                              data-reveal={true}
+-                             data-revealed=""
+                            >
++                             Sejarah
+                          <div className="lg:col-span-9">
+                            <p
+                              className="prose-body !text-[1.25rem] !text-[var(--color-text)]"
+                              data-reveal={true}
+-                             data-revealed=""
+                            >
++                             [CONTOH] Sejarah sekolah. Ceritakan kapan sekolah berdiri dan bagaimana perjalanannya sam...
+                        ...
+                    ...
+                ...
+              ...
+    ...

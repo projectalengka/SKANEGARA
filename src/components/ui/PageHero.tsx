@@ -34,7 +34,7 @@ export function PageHero({
           </div>
 
           <div className="lg:col-span-9">
-            <h1 className="display text-[clamp(2.5rem,9vw,7rem)] leading-[0.88]">
+            <h1 className="display text-[length:var(--step-8)] leading-[0.88]">
               {lines.map((line, lineIndex) => (
                 <span key={line} className="block">
                   {lineIndex === lines.length - 1 && lines.length > 1 ? <em>{line}</em> : line}
@@ -73,7 +73,7 @@ export function EmptyState({
 }) {
   return (
     <div className="border border-dashed border-[var(--color-line)] px-6 py-14 text-center" data-reveal>
-      <p className="display text-[1.5rem]">{title}</p>
+      <p className="display text-[length:var(--step-3)]">{title}</p>
       {body ? <p className="mx-auto mt-3 max-w-md text-[var(--color-text-muted)]">{body}</p> : null}
       {action ? <div className="mt-7 flex justify-center">{action}</div> : null}
     </div>

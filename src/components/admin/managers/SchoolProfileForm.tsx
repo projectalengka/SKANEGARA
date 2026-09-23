@@ -25,8 +25,8 @@ export function SchoolProfileForm({ profile }: { profile: SchoolProfileContent }
         return (
           <div className="flex flex-col gap-8">
             <section className="border border-[var(--color-line)] bg-[var(--color-paper)] px-6 py-6">
-              <h2 className="display text-[1.35rem]">Identitas</h2>
-              <p className="mt-2 text-[0.9375rem] text-[var(--color-text-muted)]">
+              <h2 className="display text-[length:var(--step-3)]">Identitas</h2>
+              <p className="mt-2 text-[length:var(--step-0)] text-[var(--color-text-muted)]">
                 Nama sekolah dan tagline yang tampil di halaman depan.
               </p>
 
@@ -60,8 +60,8 @@ export function SchoolProfileForm({ profile }: { profile: SchoolProfileContent }
             </section>
 
             <section className="border border-[var(--color-line)] bg-[var(--color-paper)] px-6 py-6">
-              <h2 className="display text-[1.35rem]">Deskripsi &amp; Sejarah</h2>
-              <p className="mt-2 text-[0.9375rem] text-[var(--color-text-muted)]">
+              <h2 className="display text-[length:var(--step-3)]">Deskripsi &amp; Sejarah</h2>
+              <p className="mt-2 text-[length:var(--step-0)] text-[var(--color-text-muted)]">
                 Teks ini tampil pada halaman Tentang Kami dan ringkasannya di halaman depan.
               </p>
 
@@ -85,7 +85,7 @@ export function SchoolProfileForm({ profile }: { profile: SchoolProfileContent }
             </section>
 
             <section className="border border-[var(--color-line)] bg-[var(--color-paper)] px-6 py-6">
-              <h2 className="display text-[1.35rem]">Visi &amp; Misi</h2>
+              <h2 className="display text-[length:var(--step-3)]">Visi &amp; Misi</h2>
 
               <div className="mt-6 flex flex-col gap-6">
                 <TextArea
@@ -106,8 +106,8 @@ export function SchoolProfileForm({ profile }: { profile: SchoolProfileContent }
             </section>
 
             <section className="border border-[var(--color-line)] bg-[var(--color-paper)] px-6 py-6">
-              <h2 className="display text-[1.35rem]">Alamat &amp; Kontak</h2>
-              <p className="mt-2 text-[0.9375rem] text-[var(--color-text-muted)]">
+              <h2 className="display text-[length:var(--step-3)]">Alamat &amp; Kontak</h2>
+              <p className="mt-2 text-[length:var(--step-0)] text-[var(--color-text-muted)]">
                 Data ini tampil pada footer, halaman Kontak, dan halaman Tentang Kami.
               </p>
 
@@ -154,8 +154,8 @@ export function SchoolProfileForm({ profile }: { profile: SchoolProfileContent }
             </section>
 
             <section className="border border-[var(--color-line)] bg-[var(--color-paper)] px-6 py-6">
-              <h2 className="display text-[1.35rem]">Media Sosial</h2>
-              <p className="mt-2 text-[0.9375rem] text-[var(--color-text-muted)]">
+              <h2 className="display text-[length:var(--step-3)]">Media Sosial</h2>
+              <p className="mt-2 text-[length:var(--step-0)] text-[var(--color-text-muted)]">
                 Kosongkan bila sekolah belum memiliki akun. Ikonnya hanya tampil jika tautan diisi.
               </p>
 

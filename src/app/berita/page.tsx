@@ -51,10 +51,13 @@ export default async function NewsPage() {
           {news.length === 0 ? (
             <EmptyState
               title="Belum ada berita."
-              body="Berita yang Anda terbitkan melalui Dasbor akan muncul di halaman ini secara otomatis."
+              body="Berita yang diterbitkan melalui Dasbor akan muncul di halaman ini secara otomatis."
               action={
-                <Link href="/admin/masuk" className="btn btn--solid">
-                  Masuk ke Dasbor
+                // Same reasoning as the works page: a visitor reading the public
+                // news archive is not the administrator, so the empty state must
+                // not hand them the admin login. Point at contact instead.
+                <Link href="/kontak" className="btn btn--solid">
+                  Hubungi Kami
                   <span className="btn__arrow" aria-hidden="true">
                     →
                   </span>
@@ -101,7 +104,7 @@ export default async function NewsPage() {
                               </time>
                             </div>
 
-                            <h3 className="display mt-4 text-[clamp(1.5rem,4vw,2.5rem)] leading-[1.05] transition-colors duration-500 group-hover:text-[var(--color-accent)]">
+                            <h3 className="display mt-4 text-[length:var(--step-4)] leading-[1.05] transition-colors duration-500 group-hover:text-[var(--color-accent)]">
                               {item.title}
                             </h3>
                             <p className="mt-4 max-w-2xl text-[var(--color-text-muted)]">

@@ -1,0 +1,334 @@
+{
+  "phase": "before",
+  "viewports": [
+    {
+      "width": 1440,
+      "headline": "SMK Jayanegara — Tempat Keterampilan Menjadi Masa Depan.\nSMK\nTempat\nKeterampilan\nMenjadi\nMasa Depan.",
+      "sectionNames": [
+        "judul-hero",
+        null,
+        "judul-perkenalan",
+        "judul-tentang",
+        "judul-program",
+        "judul-kegiatan",
+        "judul-karya",
+        "judul-galeri",
+        "judul-berita",
+        "judul-ajakan"
+      ],
+      "errors": [],
+      "scrollWidth": 1440,
+      "overflow": false,
+      "lenis": true,
+      "cursor": "auto",
+      "hidden": [],
+      "fonts": true,
+      "broken": [],
+      "dialog": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "focusInside": true
+      },
+      "dialogNext": "Foto: Praktik di Workshop",
+      "focusRestored": true
+    },
+    {
+      "width": 320,
+      "headline": "SMK Jayanegara — Tempat Keterampilan Menjadi Masa Depan.\nSMK\nTempat\nKeterampilan\nMenjadi\nMasa Depan.",
+      "sectionNames": [
+        "judul-hero",
+        null,
+        "judul-perkenalan",
+        "judul-tentang",
+        "judul-program",
+        "judul-kegiatan",
+        "judul-karya",
+        "judul-galeri",
+        "judul-berita",
+        "judul-ajakan"
+      ],
+      "errors": [],
+      "scrollWidth": 320,
+      "overflow": false,
+      "lenis": false,
+      "cursor": "auto",
+      "hidden": [],
+      "fonts": true,
+      "broken": [],
+      "dialog": {
+        "width": 320,
+        "scrollWidth": 320,
+        "focusInside": true
+      },
+      "dialogNext": "Foto: Praktik di Workshop",
+      "focusRestored": true,
+      "menu": {
+        "height": 844,
+        "scrollHeight": 844,
+        "inert": false
+      }
+    },
+    {
+      "width": 375,
+      "headline": "SMK Jayanegara — Tempat Keterampilan Menjadi Masa Depan.\nSMK\nTempat\nKeterampilan\nMenjadi\nMasa Depan.",
+      "sectionNames": [
+        "judul-hero",
+        null,
+        "judul-perkenalan",
+        "judul-tentang",
+        "judul-program",
+        "judul-kegiatan",
+        "judul-karya",
+        "judul-galeri",
+        "judul-berita",
+        "judul-ajakan"
+      ],
+      "errors": [],
+      "scrollWidth": 375,
+      "overflow": false,
+      "lenis": false,
+      "cursor": "auto",
+      "hidden": [],
+      "fonts": true,
+      "broken": [],
+      "dialog": {
+        "width": 375,
+        "scrollWidth": 375,
+        "focusInside": true
+      },
+      "dialogNext": "Foto: Praktik di Workshop",
+      "focusRestored": true,
+      "menu": {
+        "height": 844,
+        "scrollHeight": 844,
+        "inert": false
+      }
+    },
+    {
+      "width": 390,
+      "headline": "SMK Jayanegara — Tempat Keterampilan Menjadi Masa Depan.\nSMK\nTempat\nKeterampilan\nMenjadi\nMasa Depan.",
+      "sectionNames": [
+        "judul-hero",
+        null,
+        "judul-perkenalan",
+        "judul-tentang",
+        "judul-program",
+        "judul-kegiatan",
+        "judul-karya",
+        "judul-galeri",
+        "judul-berita",
+        "judul-ajakan"
+      ],
+      "errors": [],
+      "scrollWidth": 390,
+      "overflow": false,
+      "lenis": false,
+      "cursor": "auto",
+      "hidden": [
+        "Perkenalan",
+        "Belajar.Berkarya.Berkembang.",
+        "[Paragraf perkenalan sekolah — isi melalui Dasbor Admin]",
+        "Tentang Kami→",
+        "01",
+        "SMKJayanegara",
+        "[Ringkasan profil sekolah untuk halaman depan — isi melalui Dasbor Adm",
+        "Sejarah",
+        "[Sejarah sekolah — isi melalui Dasbor Admin]",
+        "Visi[Visi sekolah — isi melalui Dasbor Admin]",
+        "Misi01[Misi pertama — isi melalui Dasbor Admin]02[Misi kedua — isi mel",
+        "Selengkapnya→",
+        "02",
+        "Program Keahlian",
+        "Dua jalur,satu arah.",
+        "[Kalimat pengantar program keahlian — isi melalui Dasbor Admin]",
+        "03",
+        "Kehidupan di Jayanegara",
+        "Hari-haridi sekolah.",
+        "[Kalimat pengantar kegiatan sekolah — isi melalui Dasbor Admin]",
+        "Lihat Kegiatan→",
+        "04",
+        "Karya Siswa",
+        "Yang merekakerjakan.",
+        "[Kalimat pengantar karya siswa — isi melalui Dasbor Admin]",
+        "Lihat Karya→",
+        "06",
+        "Galeri",
+        "SekilasJayanegara.",
+        "[Kalimat pengantar galeri — isi melalui Dasbor Admin]",
+        "Lihat Galeri→",
+        "05",
+        "Berita Terkini",
+        "Kabar darisekolah.",
+        "Baca Berita→",
+        "Belum ada berita.Berita yang Anda terbitkan melalui Dasbor akan muncul",
+        "Ayo Bergabung",
+        "SiapMemulai?",
+        "[Kalimat ajakan untuk calon siswa — isi melalui Dasbor Admin]",
+        "Kunjungi Sekolah→Hubungi KamiInformasi PPDB"
+      ],
+      "fonts": true,
+      "broken": [],
+      "dialog": {
+        "width": 390,
+        "scrollWidth": 390,
+        "focusInside": true
+      },
+      "dialogNext": "Foto: Praktik di Workshop",
+      "focusRestored": true,
+      "menu": {
+        "height": 844,
+        "scrollHeight": 844,
+        "inert": false
+      }
+    },
+    {
+      "width": 414,
+      "headline": "SMK Jayanegara — Tempat Keterampilan Menjadi Masa Depan.\nSMK\nTempat\nKeterampilan\nMenjadi\nMasa Depan.",
+      "sectionNames": [
+        "judul-hero",
+        null,
+        "judul-perkenalan",
+        "judul-tentang",
+        "judul-program",
+        "judul-kegiatan",
+        "judul-karya",
+        "judul-galeri",
+        "judul-berita",
+        "judul-ajakan"
+      ],
+      "errors": [],
+      "scrollWidth": 414,
+      "overflow": false,
+      "lenis": false,
+      "cursor": "auto",
+      "hidden": [],
+      "fonts": true,
+      "broken": [],
+      "dialog": {
+        "width": 414,
+        "scrollWidth": 414,
+        "focusInside": true
+      },
+      "dialogNext": "Foto: Praktik di Workshop",
+      "focusRestored": true,
+      "menu": {
+        "height": 844,
+        "scrollHeight": 844,
+        "inert": false
+      }
+    },
+    {
+      "width": 768,
+      "headline": "SMK Jayanegara — Tempat Keterampilan Menjadi Masa Depan.\nSMK\nTempat\nKeterampilan\nMenjadi\nMasa Depan.",
+      "sectionNames": [
+        "judul-hero",
+        null,
+        "judul-perkenalan",
+        "judul-tentang",
+        "judul-program",
+        "judul-kegiatan",
+        "judul-karya",
+        "judul-galeri",
+        "judul-berita",
+        "judul-ajakan"
+      ],
+      "errors": [],
+      "scrollWidth": 768,
+      "overflow": false,
+      "lenis": true,
+      "cursor": "auto",
+      "hidden": [],
+      "fonts": true,
+      "broken": [],
+      "dialog": {
+        "width": 768,
+        "scrollWidth": 768,
+        "focusInside": true
+      },
+      "dialogNext": "Foto: Praktik di Workshop",
+      "focusRestored": true,
+      "menu": {
+        "height": 844,
+        "scrollHeight": 844,
+        "inert": false
+      }
+    },
+    {
+      "width": 1024,
+      "headline": "SMK Jayanegara — Tempat Keterampilan Menjadi Masa Depan.\nSMK\nTempat\nKeterampilan\nMenjadi\nMasa Depan.",
+      "sectionNames": [
+        "judul-hero",
+        null,
+        "judul-perkenalan",
+        "judul-tentang",
+        "judul-program",
+        "judul-kegiatan",
+        "judul-karya",
+        "judul-galeri",
+        "judul-berita",
+        "judul-ajakan"
+      ],
+      "errors": [],
+      "scrollWidth": 1024,
+      "overflow": false,
+      "lenis": true,
+      "cursor": "auto",
+      "hidden": [],
+      "fonts": true,
+      "broken": [],
+      "dialog": {
+        "width": 1024,
+        "scrollWidth": 1024,
+        "focusInside": true
+      },
+      "dialogNext": "Foto: Praktik di Workshop",
+      "focusRestored": true
+    },
+    {
+      "width": 1920,
+      "headline": "SMK Jayanegara — Tempat Keterampilan Menjadi Masa Depan.\nSMK\nTempat Keterampilan\nMenjadi Masa Depan.",
+      "sectionNames": [
+        "judul-hero",
+        null,
+        "judul-perkenalan",
+        "judul-tentang",
+        "judul-program",
+        "judul-kegiatan",
+        "judul-karya",
+        "judul-galeri",
+        "judul-berita",
+        "judul-ajakan"
+      ],
+      "errors": [],
+      "scrollWidth": 1920,
+      "overflow": false,
+      "lenis": true,
+      "cursor": "auto",
+      "hidden": [],
+      "fonts": true,
+      "broken": [],
+      "dialog": {
+        "width": 1920,
+        "scrollWidth": 1920,
+        "focusInside": true
+      },
+      "dialogNext": "Foto: Praktik di Workshop",
+      "focusRestored": true
+    }
+  ],
+  "failures": [
+    "390: {\"width\":390,\"scrollWidth\":390,\"overflow\":false,\"lenis\":false,\"cursor\":\"auto\",\"hidden\":[\"Perkenalan\",\"Belajar.Berkarya.Berkembang.\",\"[Paragraf perkenalan sekolah — isi melalui Dasbor Admin]\",\"Tentang Kami→\",\"01\",\"SMKJayanegara\",\"[Ringkasan profil sekolah untuk halaman depan — isi melalui Dasbor Adm\",\"Sejarah\",\"[Sejarah sekolah — isi melalui Dasbor Admin]\",\"Visi[Visi sekolah — isi melalui Dasbor Admin]\",\"Misi01[Misi pertama — isi melalui Dasbor Admin]02[Misi kedua — isi mel\",\"Selengkapnya→\",\"02\",\"Program Keahlian\",\"Dua jalur,satu arah.\",\"[Kalimat pengantar program keahlian — isi melalui Dasbor Admin]\",\"03\",\"Kehidupan di Jayanegara\",\"Hari-haridi sekolah.\",\"[Kalimat pengantar kegiatan sekolah — isi melalui Dasbor Admin]\",\"Lihat Kegiatan→\",\"04\",\"Karya Siswa\",\"Yang merekakerjakan.\",\"[Kalimat pengantar karya siswa — isi melalui Dasbor Admin]\",\"Lihat Karya→\",\"06\",\"Galeri\",\"SekilasJayanegara.\",\"[Kalimat pengantar galeri — isi melalui Dasbor Admin]\",\"Lihat Galeri→\",\"05\",\"Berita Terkini\",\"Kabar darisekolah.\",\"Baca Berita→\",\"Belum ada berita.Berita yang Anda terbitkan melalui Dasbor akan muncul\",\"Ayo Bergabung\",\"SiapMemulai?\",\"[Kalimat ajakan untuk calon siswa — isi melalui Dasbor Admin]\",\"Kunjungi Sekolah→Hubungi KamiInformasi PPDB\"],\"fonts\":true,\"broken\":[],\"dialog\":{\"width\":390,\"scrollWidth\":390,\"focusInside\":true},\"dialogNext\":\"Foto: Praktik di Workshop\",\"focusRestored\":true,\"menu\":{\"height\":844,\"scrollHeight\":844,\"inert\":false}}"
+  ],
+  "reducedMotion": {
+    "opacity": "0",
+    "height": 208.5625,
+    "lenis": false,
+    "hidden": 0
+  },
+  "noJavaScript": {
+    "opacity": "0",
+    "height": 0,
+    "lenis": false,
+    "hidden": 0
+  }
+}

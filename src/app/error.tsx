@@ -31,10 +31,14 @@ export default function Error({
       <div className="shell-wide">
         <p className="label text-[var(--color-accent)]">Kesalahan 500</p>
 
-        <h1 className="display mt-8 text-[clamp(2.5rem,10vw,7rem)] leading-[0.88]">
+        <h1 className="display mt-8 text-[length:var(--step-8)] leading-[0.88]">
+          {/* The heading used to repeat `ui.serverErrorTitle` verbatim on both
+              lines, which rendered "Terjadi kesalahan. Terjadi kesalahan." The
+              title is the plain statement; the second line is the promise that
+              it is recoverable, and they must not be the same sentence. */}
           {ui.serverErrorTitle}
           <br />
-          <em>Terjadi kesalahan.</em>
+          <em>Coba sekali lagi.</em>
         </h1>
 
         <p className="prose-body mt-8">{ui.serverErrorBody}</p>

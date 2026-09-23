@@ -33,19 +33,6 @@ export function gsapReady(): typeof gsap {
 }
 
 /**
- * Marks the document as script-capable.
- *
- * Every CSS rule that hides content for an animation is gated behind `.js`, so
- * this single class is what switches the whole progressive-enhancement system
- * on. It is set by the inline script in the root layout — before paint, so
- * there is no flash of visible-then-hidden content.
- */
-export function markScripted(): void {
-  if (typeof document === 'undefined') return;
-  document.documentElement.classList.add('js');
-}
-
-/**
  * Splits an element's *rendered lines* into masked lines.
  *
  * Why not split on spaces or use a manual array: neither survives a real
@@ -358,7 +345,8 @@ export function parallax(
 export function heroEntrance(root: HTMLElement): void {
   const g = gsapReady();
 
-  const nav = root.querySelectorAll<HTMLElement>('[data-hero="nav"]');
+  // The fixed header is a sibling of the hero, not its descendant.
+  const nav = document.querySelectorAll<HTMLElement>('.site-header [data-hero="nav"]');
   const kicker = root.querySelector<HTMLElement>('[data-hero="kicker"]');
   const title = root.querySelector<HTMLElement>('[data-hero="title"]');
   const actions = root.querySelectorAll<HTMLElement>('[data-hero="action"]');
@@ -381,7 +369,7 @@ export function heroEntrance(root: HTMLElement): void {
 
   // 2. Kicker.
   if (kicker) {
-    timeline.fromTo(kicker, { opacity: 0, y: TRAVEL.sm }, { opacity: 1, y: 0, duration: DUR.reveal }, '-=0.7');
+    timeline.fromTo(kicker, { opacity: 0, y: TRAVEL.sm * motionScale() }, { opacity: 1, y: 0, duration: DUR.reveal }, 0.1);
   }
 
   // 3. The school name, line by line.
@@ -426,8 +414,8 @@ export function heroEntrance(root: HTMLElement): void {
 
   // 6. Scroll indicator, last and quietest.
   if (indicator) {
-    timeline.fromTo(indicator, { opacity: 0 }, { opacity: 1, duration: DUR.reveal }, '-=0.6');
-    timeline.to(indicator, { y: 8, duration: 2.2, repeat: -1, yoyo: true, ease: 'sine.inOut' });
+    timeline.fromTo(indicator, { opacity: 0 }, { opacity: 1, duration: DUR.tap }, 0.95);
+    // A navigable cue needs no perpetual bobbing or idle animation loop.
   }
 }
 
@@ -435,38 +423,88 @@ export function heroEntrance(root: HTMLElement): void {
  * Scroll-triggered reveal for anything marked `data-reveal` / `data-image-reveal`
  * inside a root element.
  *
- * Prefers a CSS-class handoff over a GSAP tween for entrances: the transition is
- * declared in `global.css`, the observer only adds `is-revealed`, and the
- * browser interpolates on the compositor. It is cheaper than a tween, it
- * survives React re-renders, and — because the hidden state lives behind `.js`
- * — it degrades to visible content when scripting is unavailable.
+ * ## Not a hydrate-safe entry point — do not call it from a component
+ *
+ * `RevealObserver` owns reveals for the whole site, and it owns them because
+ * safety here is not a local property: writing `data-revealed` before React has
+ * taken ownership of an element is a hydration mismatch, and the only reliable
+ * signal for that is the `__reactFiber$` key on the node itself. This function
+ * has no such gate, so calling it during or before hydration reintroduces the
+ * bug it was once written to avoid.
+ *
+ * It is kept only because removing an export is a breaking change for anything
+ * importing it; nothing in the project does. If a scoped variant is ever needed,
+ * build it inside `RevealObserver` where the gate lives — not here.
+ *
+ * @deprecated Use `RevealObserver`. Ungated writes cause a hydration mismatch.
  */
 export function observeReveals(root: ParentNode = document): void {
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn(
+      'observeReveals() is deprecated and ungated: RevealObserver owns reveals. ' +
+        'Writing `data-revealed` before React claims the node is a hydration mismatch.',
+    );
+  }
+
   const targets = root.querySelectorAll<HTMLElement>('[data-reveal], [data-image-reveal]');
   if (targets.length === 0) return;
 
-  if (prefersReducedMotion() || typeof IntersectionObserver === 'undefined') {
-    targets.forEach((element) => element.classList.add('is-revealed'));
-    return;
-  }
+  /**
+   * Same gate as `RevealObserver`: a node React has taken over carries a
+   * `__reactFiber$<random>` own-property, so waiting for it means the attribute
+   * comparison has already happened. Duplicated rather than imported to keep
+   * `animations.ts` free of a component dependency — but if the gate changes,
+   * change it in both places.
+   */
+  const claimed = (element: Element): boolean =>
+    Object.keys(element).some((key) => key.startsWith('__reactFiber$'));
 
-  const observer = new IntersectionObserver(
-    (entries) => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
-        const element = entry.target as HTMLElement;
-        const delay = Number(element.dataset.revealDelay ?? 0);
-        if (delay > 0) {
-          element.style.setProperty('--reveal-delay', `${delay}ms`);
+  const mark = (element: HTMLElement) => {
+    const delay = Number(element.dataset.revealDelay ?? 0);
+    if (delay > 0) {
+      element.style.setProperty('--reveal-delay', `${delay}ms`);
+    }
+    element.dataset.revealed = '';
+  };
+
+  const run = () => {
+    if (prefersReducedMotion() || typeof IntersectionObserver === 'undefined') {
+      targets.forEach(mark);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const element = entry.target as HTMLElement;
+          mark(element);
+          observer.unobserve(element);
         }
-        element.classList.add('is-revealed');
-        observer.unobserve(element);
-      }
-    },
-    { rootMargin: '0px 0px -12% 0px', threshold: 0.08 },
-  );
+      },
+      { rootMargin: '0px 0px -12% 0px', threshold: 0.08 },
+    );
 
-  targets.forEach((element) => observer.observe(element));
+    targets.forEach((element) => observer.observe(element));
+  };
+
+  // Wait for the gate, with the same fail-open deadline as the observer: never
+  // let a missing fiber key leave content hidden.
+  //
+  // `Array.from` rather than `NodeList.forEach`: `NodeListOf` has no `every`,
+  // and a snapshot is what we want anyway — elements added later are handled by
+  // the observer's own mutation pass, not by this one-shot wait.
+  const list = Array.from(targets);
+  const deadline = 800;
+  const started = performance.now();
+  const wait = () => {
+    if (list.every(claimed) || performance.now() - started > deadline) {
+      run();
+      return;
+    }
+    requestAnimationFrame(wait);
+  };
+  requestAnimationFrame(wait);
 }
 
 /** Destroys every ScrollTrigger. Called on hot reload and route teardown. */

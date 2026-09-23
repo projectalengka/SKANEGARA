@@ -22,6 +22,7 @@
 import assert from 'node:assert/strict';
 import { before, describe, it } from 'node:test';
 import { createHmac } from 'node:crypto';
+import { existsSync } from 'node:fs';
 
 const TEST_SECRET = 'b'.repeat(48) + '-uji-proxy';
 
@@ -179,5 +180,73 @@ describe('proxy routes', () => {
       source.includes('secret.length >= 32'),
       'a short or absent secret must not authorise anyone',
     );
+  });
+});
+
+/**
+ * The build must produce the file the runtime actually loads.
+ *
+ * This is the regression guard for the most expensive bug of the 2026-09-20
+ * audit. Next compiles the proxy to `.next/server/proxy.js` and then renames it
+ * to `.next/server/middleware.js` as the final step of the build. The server
+ * runtime loads `middleware.js` by that exact name, and if it is missing the
+ * resulting `MODULE_NOT_FOUND` is *swallowed* — so `/admin/*` silently stops
+ * redirecting while everything else still looks healthy.
+ *
+ * Measured before the fix: `/admin/dasbor` returned `200` with an empty body
+ * instead of `307` to `/admin/masuk`. Nothing in the build log, the type-check,
+ * or a screenshot revealed it.
+ *
+ * These assertions only run when a build exists. They are skipped otherwise so
+ * that `npm test` stays usable before the first `npm run build` — but when a
+ * build *is* present, an incomplete one fails the suite loudly.
+ */
+describe('a production build leaves the guard where the runtime looks for it', () => {
+  /**
+   * Both the probe and the answer are synchronous on purpose.
+   *
+   * `tsx` bundles this file as CommonJS, where a top-level `await` is a
+   * transform error — and a `describe` body is top-level. A `before()` hook
+   * would work too, but then a missing build would surface as a hook failure
+   * rather than a clean skip. Reading `existsSync` directly keeps the decision
+   * local to the test that needs it.
+   */
+  const path = (relative: string) => new URL(relative, import.meta.url);
+  const exists = (relative: string) => existsSync(path(relative));
+  const hasBuild = () => exists('../.next/server');
+  const skipWithoutBuild = (t: { skip: (reason: string) => void }): boolean => {
+    if (hasBuild()) return false;
+    t.skip('.next/server absent — run `npm run build` to exercise this');
+    return true;
+  };
+
+  it('renames proxy.js to middleware.js, which is the name the server requires', (t) => {
+    if (skipWithoutBuild(t)) return;
+
+    assert.ok(
+      exists('../.next/server/middleware.js'),
+      'the build must reach its final rename; without middleware.js the admin guard never runs',
+    );
+    assert.ok(
+      !exists('../.next/server/proxy.js'),
+      'a leftover proxy.js means the build was interrupted before finalization',
+    );
+  });
+
+  it('registers the proxy against the admin subtree', async (t) => {
+    if (skipWithoutBuild(t)) return;
+
+    const { readFile } = await import('node:fs/promises');
+    const manifest = JSON.parse(
+      await readFile(path('../.next/server/functions-config-manifest.json'), 'utf8'),
+    ) as { functions?: Record<string, { matchers?: { regexp?: string }[] }> };
+
+    // The registration is what tells the runtime a Node middleware exists.
+    assert.ok(manifest.functions?.['/_middleware'], 'the proxy must be registered as /_middleware');
+
+    const targetsAdmin = manifest.functions['/_middleware'].matchers?.some((m) =>
+      m.regexp?.includes('\\/admin'),
+    );
+    assert.ok(targetsAdmin, 'the registered matcher must cover /admin');
   });
 });

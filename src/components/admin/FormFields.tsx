@@ -225,13 +225,25 @@ export function SelectField({
   error?: string;
 }) {
   const id = `bidang-${name}`;
+  const hintId = hint ? `bantuan-${name}` : undefined;
+  const errorId = error ? `galat-${name}` : undefined;
 
   return (
     <div className="field">
       <label className="field__label" htmlFor={id}>
         {label}
       </label>
-      <select id={id} name={name} defaultValue={defaultValue} className="field__select" aria-invalid={Boolean(error)}>
+      <select
+        id={id}
+        name={name}
+        defaultValue={defaultValue}
+        className="field__select"
+        aria-invalid={Boolean(error)}
+        // `TextField` and `TextArea` already wire their hint and error text to
+        // the control; the select and the checkbox did not, so a screen reader
+        // announced "invalid" with no explanation of what was wrong.
+        aria-describedby={errorId ?? hintId}
+      >
         {options.map((option) => (
           <option key={option} value={option}>
             {option}
@@ -239,9 +251,13 @@ export function SelectField({
         ))}
       </select>
       {error ? (
-        <p className="field__hint !text-[var(--color-accent-deep)]">{error}</p>
+        <p id={errorId} className="field__hint !text-[var(--color-accent-deep)]">
+          {error}
+        </p>
       ) : hint ? (
-        <p className="field__hint">{hint}</p>
+        <p id={hintId} className="field__hint">
+          {hint}
+        </p>
       ) : null}
     </div>
   );
@@ -252,14 +268,18 @@ export function CheckboxField({
   name,
   label,
   hint,
+  error,
   defaultChecked = false,
 }: {
   name: string;
   label: string;
   hint?: string;
+  error?: string;
   defaultChecked?: boolean;
 }) {
   const id = `bidang-${name}`;
+  const hintId = hint ? `bantuan-${name}` : undefined;
+  const errorId = error ? `galat-${name}` : undefined;
 
   return (
     <div className="flex items-start gap-3">
@@ -269,12 +289,22 @@ export function CheckboxField({
         type="checkbox"
         defaultChecked={defaultChecked}
         className="mt-1 h-4 w-4 shrink-0 accent-[var(--color-ink)]"
+        aria-invalid={Boolean(error)}
+        aria-describedby={errorId ?? hintId}
       />
       <div>
         <label htmlFor={id} className="field__label !text-[var(--color-text)]">
           {label}
         </label>
-        {hint ? <p className="field__hint mt-1">{hint}</p> : null}
+        {error ? (
+          <p id={errorId} className="field__hint mt-1 !text-[var(--color-accent-deep)]">
+            {error}
+          </p>
+        ) : hint ? (
+          <p id={hintId} className="field__hint mt-1">
+            {hint}
+          </p>
+        ) : null}
       </div>
     </div>
   );
@@ -427,7 +457,7 @@ export function ImageUploadField({
             accept="image/jpeg,image/png,image/webp,image/avif"
             onChange={handleChange}
             disabled={status === 'uploading'}
-            className="block w-full text-[0.875rem] file:mr-4 file:border file:border-[var(--color-line)] file:bg-[var(--color-paper)] file:px-4 file:py-2.5 file:font-[family-name:var(--font-mono)] file:text-[0.6875rem] file:uppercase file:tracking-[0.12em]"
+            className="block w-full text-[length:var(--step-0)] file:mr-4 file:border file:border-[var(--color-line)] file:bg-[var(--color-paper)] file:px-4 file:py-2.5 file:font-[family-name:var(--font-mono)] file:text-[length:var(--step--2)] file:uppercase file:tracking-[0.12em]"
           />
 
           <p className="field__hint mt-3">
@@ -460,7 +490,7 @@ export function ImageUploadField({
                 setStatus('idle');
                 if (inputRef.current) inputRef.current.value = '';
               }}
-              className="link-line mt-3 text-[0.875rem]"
+              className="link-line mt-3 text-[length:var(--step-0)]"
             >
               Hapus gambar
             </button>

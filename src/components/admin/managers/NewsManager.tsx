@@ -96,7 +96,7 @@ export function NewsManager({ news }: { news: NewsContent[] }) {
 
       {filtered.length === 0 ? (
         <div className="border border-dashed border-[var(--color-line)] px-6 py-14 text-center">
-          <p className="display text-[1.5rem]">
+          <p className="display text-[length:var(--step-3)]">
             {filter === 'semua' ? 'Belum ada berita.' : `Belum ada berita berstatus ${filter}.`}
           </p>
           <p className="mx-auto mt-3 max-w-md text-[var(--color-text-muted)]">
@@ -228,7 +228,7 @@ export function NewsForm({
             {article ? <input type="hidden" name="id" value={article.id} /> : null}
 
             <section className="border border-[var(--color-line)] bg-[var(--color-paper)] px-6 py-6">
-              <h2 className="display text-[1.35rem]">Isi Berita</h2>
+              <h2 className="display text-[length:var(--step-3)]">Isi Berita</h2>
 
               <div className="mt-6 flex flex-col gap-6">
                 <div className="field">
@@ -303,8 +303,8 @@ export function NewsForm({
             </section>
 
             <section className="border border-[var(--color-line)] bg-[var(--color-paper)] px-6 py-6">
-              <h2 className="display text-[1.35rem]">Gambar Utama</h2>
-              <p className="mt-2 text-[0.9375rem] text-[var(--color-text-muted)]">
+              <h2 className="display text-[length:var(--step-3)]">Gambar Utama</h2>
+              <p className="mt-2 text-[length:var(--step-0)] text-[var(--color-text-muted)]">
                 Unggah gambar melalui panel di atas. Bila dikosongkan, berita tetap dapat
                 diterbitkan tanpa gambar.
               </p>
@@ -334,7 +334,7 @@ export function NewsForm({
             </section>
 
             <section className="border border-[var(--color-line)] bg-[var(--color-paper)] px-6 py-6">
-              <h2 className="display text-[1.35rem]">Terbit</h2>
+              <h2 className="display text-[length:var(--step-3)]">Terbit</h2>
 
               <div className="mt-6 grid gap-6 sm:grid-cols-2">
                 <SelectField

@@ -507,6 +507,97 @@ placeholder('Sejarah sekolah');
 keduanya tidak akan pernah berbeda pendapat soal apa yang masih kosong.
 Dasbor menampilkan daftar **Perlu Dilengkapi** di halaman Dasbor.
 
+### Data contoh (`SAMPLE_DATA`)
+
+Kadang tata letak perlu dinilai sebelum tulisan asli sekolah ada. Halaman berita
+yang kosong tidak bisa dinilai desainnya. Untuk itu ada `src/data/sample.ts`:
+satu berkas berisi data contoh untuk berita, kegiatan, galeri dan karya siswa.
+
+Aturannya, dan ini yang membuatnya aman dipakai di situs sekolah:
+
+1. **Setiap judul diawali `[CONTOH]`.** Pembaca tidak mungkin salah kira.
+   Slug-nya juga diawali `contoh-`, jadi URL-nya pun mengumumkan diri sendiri.
+2. **Mati secara bawaan.** Hanya `SAMPLE_DATA=on` (atau `true` / `1`) yang
+   menyalakannya. Salah tulis dianggap mati.
+3. **Tidak menimpa tulisan Anda.** Data contoh hanya menggantikan konten yang
+   **masih placeholder** — lihat bagian di bawah.
+4. **Tidak ada nama siswa** di karya contoh, sama seperti data awal. Mengarang
+   nama orang lalu memasangnya di karya karangan adalah pelanggaran aturan
+   konten yang paling jelas.
+5. **Dasbor memberi tahu.** Saat mode contoh aktif, sidebar dasbor menampilkan
+   peringatan supaya Anda tidak perlu menebak apa yang dilihat pengunjung.
+
+#### Kapan data contoh menggantikan, kapan tidak
+
+Ini bagian yang paling mudah salah, dan sudah pernah salah dua kali. Aturannya:
+
+| Keadaan | Yang terjadi |
+| --- | --- |
+| Berita / Kegiatan (memang sengaja kosong) | Data contoh menggantikan. |
+| Karya siswa, judulnya masih `[Judul karya …]` | Data contoh menggantikan. |
+| Karya siswa, sudah ada satu judul asli | **Tidak digantikan sama sekali.** |
+| Galeri (keterangannya tulisan jadi, bukan placeholder) | **Tidak digantikan.** |
+| Apa pun yang sudah Anda tulis di dasbor | **Tidak digantikan.** |
+
+Dua kesalahan yang pernah terjadi, keduanya sudah ditutup oleh uji:
+
+- Pemeriksaan pertama hanya berbunyi "apakah daftarnya kosong". Untuk karya dan
+  galeri, daftarnya **tidak** kosong — ada isi awal — jadi syaratnya tak pernah
+  terpenuhi dan data contoh diabaikan diam-diam.
+- Pemeriksaan kedua hanya melihat konten cadangan di memori. Padahal
+  `npm run db:seed` menyalin isi awal itu **ke basis data**, sehingga yang menang
+  adalah baris basis data dan konten cadangan tidak pernah dibaca. Akibatnya
+  `/karya` menampilkan satu kartu per kategori dengan dua kolom kosong di
+  sampingnya.
+
+Sekarang pemeriksaan dilakukan pada baris yang **benar-benar menang** — dari
+memori atau dari Postgres — dengan melihat judulnya. Selama semuanya masih
+placeholder, data contoh boleh menggantikan. Begitu ada satu judul asli, seluruh
+koleksi itu dibiarkan apa adanya.
+
+#### Cara memakai
+
+Menyalakan:
+
+```bash
+# .env
+SAMPLE_DATA=on
+```
+
+**Mulai ulang server** — nilai ini dibaca saat aplikasi menyala.
+
+Mematikan — kembali ke keadaan kosong yang sebenarnya:
+
+```bash
+# .env
+SAMPLE_DATA=off     # atau hapus barisnya sama sekali
+```
+
+Menghapus fitur ini sepenuhnya: hapus `src/data/sample.ts`, lalu hapus pemanggilan
+`sampleInsteadOf` / `withSample*` / `isUneditedSeed` di `src/lib/content.ts`.
+Tidak ada baris basis data dan tidak ada migrasi yang terlibat.
+
+### Kenapa gambar punya animasi wipe, dan kenapa lapisnya di dalam
+
+Gambar dengan `data-image-reveal` muncul lewat animasi *wipe* (terbuka dari atas
+ke bawah), bukan fade.
+
+**Klipnya dipasang pada gambarnya, bukan pada elemen yang diamati.** Ini bukan
+detail gaya — ini pernah jadi bug yang membuat seluruh gambar di `/karya`,
+`/galeri`, dan `/berita` tidak terlihat.
+
+Sebabnya: elemen yang sepenuhnya terpotong `clip-path: inset(0 0 100%)`
+**tidak terlihat oleh `IntersectionObserver`**. Diukur dengan dua kotak
+identik: yang terpotong melaporkan `intersectionRatio: 0`, yang tidak terpotong
+melaporkan `0.3`. Artinya observer yang tugasnya membuka klip tidak akan pernah
+melihat elemen itu — terkunci oleh CSS kita sendiri. Setelah diperbaiki, 30
+elemen yang sebelumnya tersembunyi jadi terlihat (110/110).
+
+Karena itu, kalau menambah animasi masuk untuk elemen yang diamati observer,
+**jangan memakai `clip-path`, `display: none`, atau `visibility: hidden`** pada
+elemen itu sendiri. Pakai `opacity`, `transform`, atau pindahkan klipnya ke anak
+elemen seperti yang dilakukan sekarang.
+
 ---
 
 ## 10. Struktur Proyek
@@ -575,7 +666,9 @@ kebetulan ingat memanggil pemeriksaan sesi.
 | `npm run lint` | ESLint |
 | `npm run check` | TypeScript (`tsc --noEmit`) |
 | `npm test` | Uji unit (`node:test`) |
-| `npm run qa` | check → lint → test → build |
+| `npm run verify:build` | Pastikan build benar-benar selesai (penjaga admin ada di tempatnya) |
+| `npm run qa` | check → lint → test → build → verify:build |
+| `npm run qa:lengkap` | Sama, ditambah pemeriksaan penjaga rute pada server yang hidup |
 | `npm run db:generate` | Bangkitkan klien Prisma |
 | `npm run db:migrate` | Buat + terapkan migrasi |
 | `npm run db:push` | Dorong skema tanpa migrasi |
@@ -594,13 +687,106 @@ kebetulan ingat memanggil pemeriksaan sesi.
 
 ## 12. Pemeriksaan Kualitas
 
-`npm run qa` menjalankan keempat gerbang secara berurutan:
+`npm run qa` menjalankan kelima gerbang secara berurutan:
 
 ```bash
-npm run qa    # check && lint && test && build
+npm run qa    # check && lint && test && build && verify:build
 ```
 
-Selain itu tersedia harness QA berbasis browser sungguhan di `outputs/qa.mjs`.
+Gerbang terakhir itu penting dan mudah diremehkan. **Next menamai ulang
+`.next/server/proxy.js` menjadi `.next/server/middleware.js` sebagai langkah
+paling akhir build.** Runtime server memuat berkas dengan nama `middleware.js`
+(`next-server.js:1082`), dan bila berkas itu tidak ada, galat
+`MODULE_NOT_FOUND`-nya **ditelan diam-diam** (baris 1085). Akibatnya: build yang
+terputus sedikit saja sebelum selesai menghasilkan situs yang tampak sehat
+sepenuhnya — semua halaman 200 — tetapi penjaga rute admin tidak berjalan, dan
+`/admin/dasbor` dibalas `200` alih-alih `307`.
+
+Tidak ada galat di log, tidak ada yang merah di `check`/`lint`/`test`, dan
+tidak ada yang terlihat di screenshot. Karena itu exit code `npm run build`
+**tidak cukup** sebagai bukti; `verify:build` memeriksa artefaknya langsung,
+termasuk memastikan tidak ada sisa `proxy.js` yang menandakan build terputus.
+
+Bila build ditangani sendiri (bukan lewat `qa`), jalankan keduanya:
+
+```bash
+npm run build && npm run verify:build
+```
+
+Untuk sekaligus menguji perilakunya pada server yang hidup:
+
+```bash
+npm run start &            # atau: npm run start:jaringan
+npm run qa:lengkap
+```
+
+> **Catatan bagi agen.** Bila `verify:build` melaporkan `middleware.js` tidak
+> ada, jangan mencari kesalahan di `src/proxy.ts` — berkas itu biasanya benar.
+> Periksa apakah build benar-benar selesai. Lihat juga catatan sandbox di
+> `.workbuddy-ai/memory/MEMORY.md`.
+
+### Gerbang hidrasi pada animasi reveal
+
+`RevealObserver` menulis atribut `data-revealed` untuk memicu transisi CSS.
+**Penulisan itu tidak boleh terjadi sebelum React mengambil alih elemennya.**
+React membandingkan *seluruh himpunan atribut* sebuah elemen dengan DOM virtual,
+jadi atribut yang React tidak render tetap dilaporkan sebagai
+*hydration mismatch* — dan itulah galat yang muncul di overlay dev.
+
+Yang penting dipahami: **tidak ada jadwal waktu yang aman.** React menghidrasi
+lewat banyak commit, dan Next memanggil `hydrateRoot` di dalam
+`startTransition` (`next/dist/client/app-index.js`), jadi pekerjaannya terpecah.
+Diukur di `/kegiatan` dengan `MutationObserver` + kait `onCommitFiberRoot`
+React pada satu jam `performance.now()` yang sama:
+
+```
+ 18.5ms  DOMContentLoaded              0/4 elemen sasaran diklaim React
+639.9ms  commit React #1               0/4
+706.4ms  commit React #6               0/4
+1051.9ms versi sebelumnya menulis      mismatch tercipta di sini
+1082.7ms React melaporkan mismatch     2/4
+```
+
+Empat kandidat jeda dibandingkan dengan momen React benar-benar mengklaim node,
+selama empat kali pemuatan `/kegiatan`:
+
+| kandidat | run1 | run2 | run3 | run4 | hasil |
+| --- | --- | --- | --- | --- | --- |
+| `load` + rAF | −64ms | −49ms | −53ms | −64ms | selalu lebih awal |
+| `load` + rAF ×2 | −48ms | −46ms | −39ms | −26ms | selalu lebih awal |
+| `load` + rAF ×3 | −28ms | −33ms | −27ms | −14ms | selalu lebih awal |
+| `requestIdleCallback` | +2ms | +25ms | +5ms | +4ms | lolos, margin 2ms |
+| `load` + 100ms | +41ms | +9ms | +17ms | +26ms | lolos |
+
+`requestAnimationFrame` **selalu** terlambat, berapa pun frame yang dirantai.
+Jadi gerbangnya bukan timer, melainkan sinyal yang dipakai React sendiri: node
+yang sudah diambil alih React membawa kunci `__reactFiber$<acak>`. Begitu kunci
+itu ada, perbandingan atribut untuk node tersebut sudah terjadi.
+
+`FALLBACK_MS = 800` membuka gerbang apa pun yang terjadi. Kegagalan yang tidak
+boleh terjadi di sini adalah konten yang tersembunyi selamanya, jadi gerbangnya
+**gagal-terbuka**, bukan gagal-tertutup.
+
+```bash
+# Verifikasi perilaku reveal dan hidrasi di browser sungguhan.
+node outputs/audit/probe-production.cjs http://127.0.0.1:3000   # produksi
+node outputs/audit/probe-production.cjs http://127.0.0.1:3001   # dev
+node outputs/audit/probe-hydration-repeat.cjs 6                 # uji ulang
+node outputs/audit/shot-full-real.cjs http://127.0.0.1:3000 final / 1440
+```
+
+> **Catatan bagi agen.** Dua jebakan pengukuran yang sudah memakan waktu:
+>
+> 1. **Overlay dev Next memutar ulang galat antar navigasi** dalam satu
+>    browser/konteks, jadi menguji banyak rute di satu browser menghasilkan
+>    positif palsu. Setiap halaman harus diuji di **browser baru** — itu yang
+>    dilakukan `probe-production.cjs`.
+> 2. **Menggulir sebelum halaman tenang menghasilkan laporan palsu.** Skrip yang
+>    menggulir tepat setelah `load` melaporkan `13/55` elemen ter-reveal di
+>    produksi dan `55/55` di dev — terlihat seperti regresi produksi, padahal
+>    hanya soal waktu. Beri jeda ~1500ms sebelum menggulir.
+
+Harness QA berbasis browser sungguhan ada di `outputs/qa.mjs`.
 Ia menjalankan Chrome headless dan mengukur — bukan mengasumsikan:
 
 - **error konsol** dan **respons HTTP ≥ 400** di setiap rute
