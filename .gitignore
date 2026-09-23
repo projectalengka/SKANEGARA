@@ -61,8 +61,14 @@ outputs/*.log
 .pgdata/
 .pgdata-site/
 
-# catatan kerja agen
-# Berisi catatan internal antar-sesi, bukan kode proyek. Isinya bisa memuat
-# potongan konfigurasi lokal dan keputusan yang belum matang — tidak ada
-# gunanya bagi siapa pun yang meng-clone repositori ini.
+# catatan kerja lokal
+# Berisi catatan pengembangan, bukan kode proyek — tidak ada gunanya bagi
+# siapa pun yang meng-clone repositori ini.
 .workbuddy-ai/
+
+# panduan kerja pemilik
+# Langkah praktis menjalankan, mengelola konten, dan men-deploy. Berguna di
+# komputer sendiri, tetapi bukan bagian dari kode situs — jadi tidak ikut ke
+# repositori. Panduan teknis untuk pengembang tetap ada di README.md.
+PANDUAN.md
+DEPLOY.md

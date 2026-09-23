@@ -7,10 +7,9 @@ dasbor admin untuk mengelola seluruh isinya tanpa menyentuh kode.
 Dibangun dengan Next.js App Router, PostgreSQL (Supabase), Prisma, Cloudinary,
 GSAP + Lenis. Seluruh antarmuka berbahasa Indonesia.
 
-> **Baru pertama kali di sini?** Baca **[`PANDUAN.md`](./PANDUAN.md)** lebih dulu.
-> Isinya langkah praktis dari nol sampai situs jalan — menjalankan di komputer
-> sendiri, mengelola konten, sampai men-deploy ke internet. Berkas ini (README)
-> lebih rinci dan teknis; `PANDUAN.md` yang dibaca saat Anda ingin langsung bekerja.
+> Langkah menjalankan di komputer sendiri ada di
+> [bagian 1](#1-menjalankan-di-komputer-sendiri), dan urutan menaikkannya ke
+> internet ada di [bagian 7](#7-deploy-ke-vercel).
 
 ---
 
@@ -383,14 +382,14 @@ Buka `https://<domain-anda>/admin/masuk` dan masuk.
 ### Kontrol versi
 
 Repositori ini sudah di-`git init`. Yang **tidak** ikut ter-commit: semua varian
-`.env` (kredensial sungguhan), `.pgdata/` (basis data lokal), dan
-`.workbuddy-ai/` (catatan kerja). Ketiganya ada di `.gitignore`.
+`.env` (kredensial sungguhan), `.pgdata/` (basis data lokal), dan catatan kerja
+lokal. Semuanya ada di `.gitignore`.
 
 > **Semua varian `.env` diabaikan, bukan hanya yang bernama persis `.env`.**
 > Polanya `.env.*` ditambah `!.env.example`. Ini bukan kehati-hatian berlebihan:
 > daftar nama satu per satu pernah gagal di proyek ini — `.env.lokal` dan
-> `.env.produksi` tidak masuk daftar, padahal `PANDUAN.md` menyuruh membuat
-> berkas itu dengan kredensial Supabase sungguhan. Berkas yang tidak diabaikan
+> `.env.produksi` tidak masuk daftar, padahal keduanya berisi kredensial
+> Supabase sungguhan. Berkas yang tidak diabaikan
 > **tidak memunculkan galat apa pun**; ia hanya diam-diam terunggah.
 > `tests/verify-db.test.ts` mengunci pola ini.
 
@@ -720,10 +719,9 @@ npm run start &            # atau: npm run start:jaringan
 npm run qa:lengkap
 ```
 
-> **Catatan bagi agen.** Bila `verify:build` melaporkan `middleware.js` tidak
-> ada, jangan mencari kesalahan di `src/proxy.ts` — berkas itu biasanya benar.
-> Periksa apakah build benar-benar selesai. Lihat juga catatan sandbox di
-> `.workbuddy-ai/memory/MEMORY.md`.
+> **Catatan untuk pengembang.** Bila `verify:build` melaporkan `middleware.js`
+> tidak ada, jangan mencari kesalahan di `src/proxy.ts` — berkas itu biasanya
+> benar. Periksa apakah build benar-benar selesai.
 
 ### Gerbang hidrasi pada animasi reveal
 
@@ -775,7 +773,7 @@ node outputs/audit/probe-hydration-repeat.cjs 6                 # uji ulang
 node outputs/audit/shot-full-real.cjs http://127.0.0.1:3000 final / 1440
 ```
 
-> **Catatan bagi agen.** Dua jebakan pengukuran yang sudah memakan waktu:
+> **Catatan pengukuran.** Dua jebakan yang sudah memakan waktu:
 >
 > 1. **Overlay dev Next memutar ulang galat antar navigasi** dalam satu
 >    browser/konteks, jadi menguji banyak rute di satu browser menghasilkan

@@ -139,8 +139,8 @@ describe('setiap skrip memuat .env sendiri', () => {
  * `.gitignore` harus menutup **semua** varian `.env`, bukan daftar nama.
  *
  * Daftar nama satu per satu pernah gagal di proyek ini: `.env.lokal` dan
- * `.env.produksi` tidak masuk daftar, padahal `PANDUAN.md` menyuruh membuat
- * berkas itu dengan kredensial Supabase sungguhan di dalamnya. Berkas yang
+ * `.env.produksi` tidak masuk daftar, padahal keduanya dipakai untuk menyimpan
+ * kredensial Supabase sungguhan. Berkas yang
  * tidak diabaikan tidak memunculkan galat apa pun — ia hanya diam-diam
  * terunggah ke GitHub.
  *
