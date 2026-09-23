@@ -22,8 +22,9 @@ Diperiksa 23 September 2026, bukan dikira-kira:
 
 | Hal | Keadaan | Artinya |
 | --- | --- | --- |
-| Repositori git | Ada, 3 commit, cabang `master` | Belum ada `remote`, belum pernah di-push |
-| Perubahan belum di-commit | **±173 berkas** | Harus di-commit dulu — lihat Bagian 1 |
+| Repositori git | 4 commit, cabang `main`, remote `origin` | **Sudah ter-push** ke `github.com/projectalengka/SKANEGARA` |
+| Perubahan belum di-commit | Tidak ada — pohon kerja bersih | Bagian 1 & 2 sudah dikerjakan |
+| Build dari klon bersih | ✅ selesai penuh | Isi repositori cukup untuk dibangun Vercel |
 | `npm run check` | ✅ lulus | — |
 | `npm run lint` | ✅ lulus | — |
 | `npm test` | ✅ 135/135 lulus | — |
@@ -35,8 +36,8 @@ Diperiksa 23 September 2026, bukan dikira-kira:
 | `.env` | Masih menunjuk basis data **lokal** | Kredensial Supabase belum ada |
 | Cloudinary | Belum diisi | Unggah gambar belum bisa — lihat Bagian 7 |
 
-Jadi yang belum ada bukan kode, melainkan **akun dan kredensial**. Lima bagian
-berikut mengisinya satu per satu.
+Bagian 1 dan 2 (commit + GitHub) **sudah dikerjakan**. Yang belum ada bukan kode,
+melainkan **akun dan kredensial** — Bagian 3 sampai 7 mengisinya satu per satu.
 
 ---
 
@@ -64,24 +65,29 @@ Perintah kedua hanya boleh menemukan baris contoh di `README.md`/`PANDUAN.md`.
 
 ## Bagian 1 — Commit seluruh pekerjaan
 
+> ✅ **Sudah dikerjakan** — 173 berkas dikunci dalam commit `cf38fd7`. Langkah di
+> bawah tetap disimpan sebagai rujukan untuk commit-commit berikutnya.
+
 ```bash
-git status --short | wc -l      # sekitar 173 — angka pasti tidak penting, yang penting tidak ada yang tertinggal
+git status --short | wc -l      # angka pasti tidak penting, yang penting tidak ada yang tertinggal
 git add -A
 git status --short | head -20   # tinjau sekali lagi sebelum dikunci
-git commit -m "Lengkapi situs: art direction, animasi reveal, dan gerbang mutu"
+git commit -m "Lengkapi situs: art direction, data contoh, dan gerbang mutu sebelum deploy"
 ```
 
-- [ ] Sudah di-commit
+- [x] Sudah di-commit (173 berkas, `cf38fd7`)
 
-> **Tiga berkas ini wajib ikut.** `src/data/sample.ts`, `src/lib/scroll-lock.ts`,
-> dan `scripts/verify-build.ts` saat ini **belum dilacak git**. Padahal
-> `src/lib/content.ts` mengimpor `@/data/sample`, dan `SiteHeader.tsx` serta
-> `GalleryGrid.tsx` mengimpor `@/lib/scroll-lock`. Kalau ketiganya tertinggal,
-> build di Vercel gagal dengan `Module not found` — padahal di laptop Anda
-> semuanya tampak normal, karena berkasnya ada di disk.
+> **Tiga berkas ini dulu hampir tertinggal.** `src/data/sample.ts`,
+> `src/lib/scroll-lock.ts`, dan `scripts/verify-build.ts` **tidak dilacak git**
+> sebelum commit ini. Padahal `src/lib/content.ts` mengimpor `@/data/sample`, dan
+> `SiteHeader.tsx` serta `GalleryGrid.tsx` mengimpor `@/lib/scroll-lock`. Kalau
+> ketiganya tertinggal, build di Vercel gagal dengan `Module not found` — padahal
+> di laptop semuanya tampak normal, karena berkasnya ada di disk.
 >
-> `git add -A` sudah menangkapnya. Yang perlu Anda pastikan adalah **tidak**
-> memakai `git add` satu per satu.
+> `git add -A` menangkap semuanya. Yang perlu dipastikan adalah **tidak** memakai
+> `git add` satu per satu. Pelajaran yang berlaku umum: `git status` saja tidak
+> cukup untuk melihat bahaya ini, karena berkas yang berbahaya justru yang *ada*
+> di disk. Uji yang menentukan adalah membangun dari klon bersih.
 
 > **Tangkapan layar QA tidak ikut.** 177 berkas PNG di `outputs/` (±20 MB) sudah
 > dikecualikan lewat `.gitignore` — tidak satu pun dipakai saat membangun situs.
@@ -91,13 +97,17 @@ git commit -m "Lengkapi situs: art direction, animasi reveal, dan gerbang mutu"
 
 ## Bagian 2 — Buat repositori GitHub dan push
 
+> ✅ **Sudah dikerjakan** — repositori: <https://github.com/projectalengka/SKANEGARA>
+> (publik, dibuat kosong lalu diisi dari sini). Cabang `main` sudah ter-push dan
+> melacak `origin/main`.
+
 ### 2a. Buat repositori kosong
 
 Buka <https://github.com/new>:
 
-- **Repository name:** `smk-jayanegara`
-- **Visibility:** pilih **Private** dulu. Publik bisa kapan saja setelah Anda
-  yakin tidak ada kredensial yang ikut.
+- **Repository name:** `SKANEGARA`
+- **Visibility:** pilih **Private** dulu kalau ragu. Repositori yang dipakai
+  sekarang **publik**, jadi apa pun yang ter-commit bisa dibaca siapa saja.
 - **Jangan** centang *Add a README file*, *Add .gitignore*, atau *Choose a
   license* — repositori lokal Anda sudah punya semuanya, dan menambahkannya di
   sini akan membuat `git push` pertama ditolak.
@@ -105,22 +115,31 @@ Buka <https://github.com/new>:
 ### 2b. Sambungkan dan push
 
 ```bash
-git remote add origin https://github.com/<AKUN-ANDA>/smk-jayanegara.git
+git remote add origin https://github.com/projectalengka/SKANEGARA.git
 git branch -M main
 git push -u origin main
 ```
 
-- [ ] Kode sudah terlihat di GitHub
+- [x] Kode sudah terlihat di GitHub (`refs/heads/main` = `cf38fd7`)
 
-> **Kalau muncul jendela browser untuk masuk:** itu Git Credential Manager,
-> ikuti saja — cara termudah. Kalau yang muncul malah permintaan
-> *username* dan *password* di terminal, GitHub **tidak** menerima kata sandi
-> akun untuk operasi git. Buat **Personal Access Token** (Settings → Developer
-> settings → Personal access tokens → *Tokens (classic)*, centang cakupan
-> `repo`), lalu tempel token itu sebagai kata sandi.
+> **Kalau push tampak menggantung tanpa keluaran:** itu helper kredensial yang
+> menunggu masukan yang tidak akan datang — bukan jaringan yang lambat. Kalau
+> terjadi, batalkan lalu jalankan ulang dengan helper yang jelas:
+>
+> ```bash
+> git -c credential.helper=manager push -u origin main
+> ```
+>
+> Cara itu berhasil di mesin ini. Jendela masuk GitHub bisa muncul; setujui saja.
+>
+> Kalau yang muncul malah permintaan *username* dan *password* di terminal,
+> GitHub **tidak** menerima kata sandi akun untuk operasi git. Buat **Personal
+> Access Token** (Settings → Developer settings → Personal access tokens →
+> *Tokens (classic)*, centang cakupan `repo`), lalu tempel token itu sebagai
+> kata sandi.
 >
 > Cabang diubah `master` → `main` karena itu yang diharapkan Vercel dan GitHub
-> sekarang. Nama lama tetap ada sebagai cadangan.
+> sekarang.
 
 ---
 
@@ -438,11 +457,15 @@ situs yang tampak sehat tetapi penjaga `/admin`-nya mati diam-diam.
 
 ## Daftar centang ringkas
 
-- [ ] **0** Tidak ada rahasia yang ikut ter-commit
-- [ ] **1** ±173 berkas di-commit, termasuk `src/data/sample.ts` dan `src/lib/scroll-lock.ts`
-- [ ] **2** Repositori GitHub dibuat, `git push -u origin main` berhasil
+- [x] **0** Tidak ada rahasia yang ikut ter-commit — diperiksa, bersih
+- [x] **1** 173 berkas di-commit (`cf38fd7`), termasuk `src/data/sample.ts` dan `src/lib/scroll-lock.ts`
+- [x] **2** Ter-push ke `github.com/projectalengka/SKANEGARA`, cabang `main`
 - [ ] **3** Proyek Supabase dibuat, dua URL (6543 + 5432) tercatat
 - [ ] **4** `db:deploy` → `db:seed` → `db:verify` sukses, `.env` dikembalikan ke lokal
 - [ ] **5** Vercel: Node 22.x, 6 variabel wajib terisi untuk tiga environment
 - [ ] **6** `/admin/dasbor` membalas `307`, login berhasil, sitemap benar
 - [ ] **7** Cloudinary terpasang dan unggah gambar diuji
+
+**Langkah berikutnya:** Bagian 3 — buat proyek Supabase. Sampai itu selesai,
+tidak ada yang bisa dikerjakan di Vercel, karena deploy tanpa `DATABASE_URL`
+hanya akan menghasilkan situs yang tampil memakai konten cadangan.
