@@ -226,7 +226,7 @@ ls prisma/migrations/     # harus ada folder berversi + migration_lock.toml
 ## Bagian 5 — Deploy di Vercel
 
 1. Masuk <https://vercel.com> dengan akun GitHub Anda.
-2. **Add New → Project**, lalu **Import** repositori `smk-jayanegara`.
+2. **Add New → Project**, lalu **Import** repositori `projectalengka/SKANEGARA`.
 3. Biarkan **Framework Preset** (Next.js), **Build Command**, dan **Output
    Directory** apa adanya — semuanya terdeteksi otomatis.
 4. Buka **Settings → General → Node.js Version**, pilih **22.x**. Proyek ini
