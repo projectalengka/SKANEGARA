@@ -4,8 +4,8 @@ Situs resmi SMK Jayanegara (Mojokerto, Jawa Timur): profil sekolah, program
 keahlian, karya siswa, galeri, berita, dan agenda kegiatan — lengkap dengan
 dasbor admin untuk mengelola seluruh isinya tanpa menyentuh kode.
 
-Dibangun dengan Next.js App Router, PostgreSQL (Supabase), Prisma, Cloudinary,
-GSAP + Lenis. Seluruh antarmuka berbahasa Indonesia.
+Dibangun dengan Next.js App Router, PostgreSQL (Supabase), Prisma, GSAP + Lenis.
+Seluruh antarmuka berbahasa Indonesia.
 
 > Langkah menjalankan di komputer sendiri ada di
 > [bagian 1](#1-menjalankan-di-komputer-sendiri), dan urutan menaikkannya ke
@@ -19,7 +19,7 @@ GSAP + Lenis. Seluruh antarmuka berbahasa Indonesia.
 2. [Variabel Lingkungan](#2-variabel-lingkungan)
 3. [Menyiapkan Basis Data (Supabase)](#3-menyiapkan-basis-data-supabase)
 4. [Prisma: Migrasi dan Seed](#4-prisma-migrasi-dan-seed)
-5. [Menyiapkan Cloudinary](#5-menyiapkan-cloudinary)
+5. [Menyimpan Gambar](#5-menyimpan-gambar)
 6. [Mengatur Akun Admin](#6-mengatur-akun-admin)
 7. [Deploy ke Vercel](#7-deploy-ke-vercel)
 8. [Migrasi di Produksi](#8-migrasi-di-produksi)
@@ -86,9 +86,6 @@ Salin `.env.example` menjadi `.env`. Jangan pernah meng-commit `.env` —
 | `ADMIN_PASSWORD` | untuk CMS | Kata sandi admin — teks biasa **atau** hash `scrypt$…`. |
 | `NEXT_PUBLIC_SUPABASE_URL` | opsional | Alamat proyek Supabase. Untuk penyimpanan berkas, bila dipakai. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | opsional | Kunci anon Supabase. Aman untuk publik. |
-| `CLOUDINARY_CLOUD_NAME` | untuk unggah | Nama cloud Cloudinary. |
-| `CLOUDINARY_API_KEY` | untuk unggah | API key Cloudinary. |
-| `CLOUDINARY_API_SECRET` | untuk unggah | API secret Cloudinary. **Rahasia.** |
 | `NEXT_PUBLIC_SITE_URL` | produksi | Alamat kanonik situs, mis. `https://smkjayanegara.sch.id`. |
 
 ### Membuat `AUTH_SECRET`
@@ -259,22 +256,43 @@ tidak akan menimpa tulisan yang sudah Anda sunting — kecuali baris
 
 ---
 
-## 5. Menyiapkan Cloudinary
+## 5. Menyimpan Gambar
 
-1. Buat akun gratis di <https://cloudinary.com>.
-2. Buka **Dashboard → Product Environment Credentials**.
-3. Salin **Cloud name**, **API Key**, dan **API Secret** ke `.env`.
+**Tidak ada yang perlu disiapkan.** Gambar yang diunggah dari dasbor disimpan di
+dalam basis data PostgreSQL yang sama dengan isi situs — tabel `MediaAsset`,
+kolom `data` bertipe `bytea`. Selama `DATABASE_URL` sudah terisi (dan itu wajib
+untuk konten apa pun), unggah gambar langsung bekerja.
 
-```
-CLOUDINARY_CLOUD_NAME="nama-cloud-anda"
-CLOUDINARY_API_KEY="123456789012345"
-CLOUDINARY_API_SECRET="rahasia-anda"
-```
+Cara kerjanya: server menerima berkas, mengecilkannya, mengodekan ulang ke WebP,
+lalu menyimpan hasilnya sebagai baris baru. Yang dikembalikan adalah URL pendek
+berbentuk `/api/media/<id>`, dan URL itulah yang disimpan di kolom gambar pada
+tabel program, berita, galeri, kegiatan, dan karya siswa. URL itu dilayani oleh
+`src/app/api/media/[id]/route.ts`.
 
-Unggahan dikirim dari server ke Cloudinary lewat `upload_stream`, jadi **tidak
-ada berkas yang ditulis ke disk**. Ini bukan sekadar kerapian: filesystem Vercel
-bersifat sementara, sehingga gambar yang ditulis ke disk akan hilang begitu
-fungsi selesai berjalan.
+> **Kenapa tidak memakai layanan penyimpanan gambar.** Versi pertama proyek ini
+> memakai Cloudinary. Itu berarti satu akun pihak ketiga dan tiga kredensial
+> sebelum satu foto pun bisa diunggah — dan pada 24 September 2026 terukur
+> bahwa kredensial itu masih kosong setelah berbulan-bulan, sehingga fitur
+> unggah **belum pernah sekali pun bekerja**. Keluhan "saya tidak bisa mengunggah
+> gambar" sebenarnya adalah deskripsi dari hal itu.
+>
+> Postgres sudah ada di sini sejak awal. Menaruh gambarnya di sana membuat satu-
+> satunya syarat untuk mengunggah adalah variabel yang memang sudah wajib diisi.
+
+Yang ditukar dengan keputusan itu, dan bagaimana masing-masing dijawab:
+
+- **Kuota.** Paket gratis Supabase memberi **500 MB** basis data, dipakai
+  bersama seluruh teks situs. Karena itu setiap gambar dikecilkan dan dikodekan
+  ulang sebelum disimpan (sisi panjang maksimal 2400 px, WebP kualitas 82 —
+  biasanya di bawah 300 KB untuk satu foto ponsel), dan halaman **Pengaturan**
+  melaporkan berapa banyak yang sudah terpakai. Kuota yang tidak terlihat adalah
+  kuota yang penuh diam-diam, dan begitu penuh yang gagal bukan hanya unggah:
+  **seluruh penulisan di situs** ikut gagal.
+- **CDN.** Gambar dilayani oleh route handler dengan header
+  `Cache-Control: public, max-age=31536000, immutable`. Header itu jujur di sini:
+  id dibuat saat byte ditulis, byte tidak pernah diubah, dan penggantian gambar
+  adalah baris *baru* dengan id *baru* — jadi satu URL tidak mungkin menunjuk isi
+  yang berbeda dari sebelumnya. Untuk lalu lintas situs sekolah, itu sudah cukup.
 
 **Batas unggah:** 8 MB per berkas, format JPEG / PNG / WebP / AVIF.
 
@@ -292,16 +310,47 @@ fungsi selesai berjalan.
 > `tests/upload.test.ts` mengunci hubungan kedua angka itu supaya tidak bisa
 > lepas lagi.
 
-Kalau kredensial Cloudinary belum diisi, dasbor **mengatakannya sendiri**: ada
+Kalau basis data belum tersambung, dasbor **mengatakannya sendiri**: ada
 pemberitahuan tetap di sidebar ("Unggah gambar belum aktif") dan barisnya di
 halaman **Pengaturan**. Kolom unggah tetap bisa diklik, tetapi akan menjawab
 dengan kalimat yang menjelaskan sebabnya, bukan diam.
 
-Setelah diunggah, dasbor menyimpan dua nilai: URL gambar dan *public ID*.
-Public ID dipakai untuk menghapus gambar dari Cloudinary saat item dihapus.
-Menghapus gambar bersifat **tidak fatal** — kalau Cloudinary sedang tidak bisa
-dihubungi, data tetap terhapus dari basis data dan kegagalan dicatat di log.
-Gambar yatim lebih baik daripada operasi yang gagal di tengah jalan.
+Setelah diunggah, dasbor menyimpan dua nilai: URL gambar dan *public ID* — yaitu
+`id` barisnya di tabel `MediaAsset`. Public ID itulah yang dipakai untuk
+menghapus gambar saat item dihapus. Menghapus gambar bersifat **tidak fatal** —
+kalau penghapusan gagal, data tetap terhapus dari basis data dan kegagalan
+dicatat di log. Gambar yatim lebih baik daripada operasi yang gagal di tengah
+jalan.
+
+> **Bug yang pernah ada di sini, dan cara menemukannya.** `ImageUploadField`
+> memancarkan dua input tersembunyi: `image` (URL) dan `imagePublicId` (id
+> asetnya). Action untuk **galeri** dan **karya siswa** membaca `publicId` —
+> nama yang tidak pernah ada di formulir. Akibatnya id aset tersimpan sebagai
+> string kosong, dan karena `deleteImage()` dijaga oleh `if (existing.publicId)`,
+> ia tidak pernah berjalan: **setiap foto galeri yang diganti atau dihapus
+> meninggalkan asetnya di basis data selamanya.** Action program membaca nama
+> yang benar, jadi bug ini hanya mengenai dua dari tiga jalur — dan justru itu
+> yang membuatnya lolos dari pemeriksaan manual.
+>
+> Ditemukan bukan dengan membaca kode, melainkan lewat
+> `npm run media:bersihkan`, yang melaporkan empat aset uji dengan
+> `dirujuk konten: 0` padahal foto ujinya sudah dihapus. Sekarang ada uji yang
+> **menghitung** berapa kali tiap nama dibaca — bukan sekadar memeriksa apakah
+> string-nya muncul di suatu tempat, karena tiga manajer memakai `name="image"`
+> dan satu kemunculan saja sudah cukup untuk menipu pemeriksaan yang longgar.
+> Lihat `tests/media.test.ts` bagian 7.
+
+Karena kolom unggah mengirim berkas **begitu dipilih** — supaya gambar terlihat
+sebelum disimpan — memilih berkas lalu menutup formulir tanpa menyimpan
+meninggalkan satu aset yatim. Itu wajar, bukan bug. Bersihkan dengan:
+
+```bash
+npm run media:bersihkan              # lihat saja
+npm run media:bersihkan -- --hapus   # benar-benar hapus
+```
+
+Aset yang lebih muda dari 60 menit sengaja dilewati, supaya gambar yang sedang
+menunggu disimpan tidak ikut terhapus.
 
 ---
 
@@ -430,7 +479,9 @@ hilang setelah menimpa berkas adalah kesalahan yang mahal.
 
 ### Catatan khusus Vercel
 
-- **Tidak ada berkas lokal.** Semua unggahan ke Cloudinary.
+- **Tidak ada berkas lokal.** Setiap unggahan masuk ke basis data sebagai kolom
+  `bytea`; tidak ada yang ditulis ke disk, jadi tidak ada yang hilang saat
+  fungsi selesai berjalan.
 - **Kolam koneksi dibatasi 5** (`max: 5` di `src/lib/db.ts`) supaya tidak
   menghabiskan jatah koneksi Supabase saat lalu lintas naik.
 - **Halaman admin selalu dinamis** (`force-dynamic`), jadi tidak ada data
@@ -637,6 +688,7 @@ src/
 │   │   ├── kontak/                kontak + formulir
 │   │   ├── privasi/               kebijakan privasi
 │   │   └── error.tsx, loading.tsx batas galat & status muat situs
+│   ├── api/media/[id]/route.ts    menyajikan gambar yang tersimpan di basis data
 │   ├── admin/
 │   │   ├── masuk/                 halaman login (di luar grup terproteksi)
 │   │   ├── auth-actions.ts        login, logout
@@ -659,7 +711,7 @@ src/
 │   ├── content.ts                 SEMUA pembacaan publik
 │   ├── auth.ts                    scrypt, token sesi
 │   ├── session.ts                 cookie sesi
-│   ├── cloudinary.ts              unggah & hapus gambar
+│   ├── media.ts                   simpan/baca/hapus gambar di basis data
 │   ├── upload-limits.ts           aturan unggah, dibaca klien DAN server
 │   ├── animations.ts              GSAP: splitLines, reveal, parallax, hero
 │   ├── motion.ts                  konstanta durasi, breakpoint, easing
@@ -715,6 +767,7 @@ menyadarinya sampai halaman itu terindeks.
 | `npm run db:studio` | Buka Prisma Studio |
 | `npm run db:seed` | Isi konten awal |
 | `npm run db:verify` | Verifikasi jalur basis data ujung ke ujung |
+| `npm run media:bersihkan` | Lihat gambar yang tidak dipakai siapa pun (tambah `-- --hapus` untuk menghapus) |
 
 > **Kenapa ada varian `:jaringan`.** Secara bawaan server hanya mengikat ke
 > `127.0.0.1`, sehingga perangkat lain **tidak bisa** membukanya — itu pilihan
@@ -895,6 +948,7 @@ dan sesudah** perbaikan lalu dibandingkan.
 ```bash
 node --env-file=.env outputs/probe-upload.mjs        # TAG=before|after
 node --env-file=.env outputs/probe-admin-shell.mjs   # TAG=before|after
+node --env-file=.env outputs/probe-media.mjs         # rantai lengkap sampai beranda
 ```
 
 `probe-upload.mjs` mengunggah tiga berkas berukuran berbeda lewat kolom berkas
@@ -903,9 +957,54 @@ terjadi. Yang membedakan sebab-sebabnya adalah ukurannya:
 
 | Berkas | Sebelum perbaikan | Sesudah perbaikan |
 | --- | --- | --- |
-| 200 KB | "Penyimpanan gambar belum dikonfigurasi…" (POST 200) | sama |
-| 1,5 MB | **macet di "Mengunggah…"**, POST 500, `Body exceeded 1 MB limit.` | "Penyimpanan gambar belum dikonfigurasi…" (POST 200) |
+| 200 KB | "Penyimpanan gambar belum dikonfigurasi…" (POST 200) | "Gambar berhasil diunggah." |
+| 1,5 MB | **macet di "Mengunggah…"**, POST 500, `Body exceeded 1 MB limit.` | "Gambar berhasil diunggah." |
 | 9 MB | **macet di "Mengunggah…"**, POST 500 | "Ukuran gambar melebihi 8 MB.", **tanpa POST sama sekali** |
+
+> **Catatan penting soal berkas uji di probe itu.** PNG-nya disusun dengan
+> menempelkan byte sampah di belakang PNG 1×1, jadi sharp **menolaknya** dan
+> `media.ts` menyimpan byte aslinya lewat jalur penurunan. Artinya probe itu
+> membuktikan batas badan Server Action dan sampainya permintaan ke action —
+> bukan encoder-nya. Untuk mengukur encoder dan seluruh rantai penyajian, pakai
+> `probe-media.mjs`, yang mengunggah PNG sah 1600×1000 hasil `sharp`.
+
+`probe-media.mjs` berjalan dari ujung ke ujung dan berhenti di titik pertama yang
+gagal, supaya laporannya menunjuk satu sebab alih-alih daftar kemungkinan:
+
+| Langkah | Yang dibuktikan |
+| --- | --- |
+| pesan status | unggahan benar-benar sampai dan diproses |
+| nilai tersembunyi `image` | bentuk URL-nya `/api/media/<id>`, bukan sesuatu yang lain |
+| `GET` URL itu | rutenya benar-benar menyajikan, dengan `Content-Type` gambar |
+| `Content-Length` == byte diterima | panjang yang dijanjikan sama dengan yang dikirim |
+| magic bytes `RIFF…WEBP` | byte-nya hasil encode, bukan berkas asli yang disimpan karena encoder gagal |
+| ukuran akhir < ukuran sumber | pengecilan benar-benar terjadi |
+| `naturalWidth` pratinjau | peramban benar-benar berhasil men-decode-nya |
+| URL ditemukan di HTML beranda | gambar tampil di halaman depan, bukan hanya tersimpan |
+| `<img>` di beranda ter-decode | elemennya ada **dan** gambarnya benar-benar tergambar |
+| jumlah aset kembali nol | menghapus item juga menghapus asetnya — tidak ada yang bocor |
+
+> **Kenapa "ada di HTML" belum cukup, dan kenapa `naturalWidth` nol belum tentu
+> bug.** Beranda memuat sepuluh bagian dan galerinya ada di bawah, jadi tangkapan
+> layar bagian atas halaman tidak membuktikan apa pun. Probe ini menggulirkan
+> elemennya ke tampilan lalu memotret elemen itu sendiri
+> (`outputs/screenshots/probe-media-foto.png`).
+>
+> `scrollIntoViewIfNeeded()` dipakai, bukan `window.scrollTo()` — halaman ini
+> ber-Lenis, dan menggulir lewat `window` tidak menggerakkan viewport-nya. Dan
+> `naturalWidth` nol **hampir selalu** berarti `loading="lazy"` belum terpicu,
+> bukan gambar rusak: elemennya ada, kotaknya terisi 677×452 px, tapi gambarnya
+> belum dimuat. Probe ini menunggu peristiwa `load`-nya, dan kalau tetap nol baru
+> memaksa `loading="eager"` untuk memisahkan "pemicu lazy-nya tidak jalan" dari
+> "byte-nya bermasalah". Yang kedua barulah bug. Pada jalur yang benar hasilnya
+> `natural 742×464, loading="lazy"`.
+
+Probe itu menulis ke basis data lalu **membersihkan dirinya sendiri**: foto
+ujinya disimpan, diperiksa di beranda, lalu dihapus lagi — dan karena
+`deleteGalleryItem` memanggil `deleteImage()`, asetnya ikut terhapus. Langkah
+terakhirnya memeriksa justru hal itu: kalau `npm run media:bersihkan` masih
+menemukan aset sesudah probe selesai, yang rusak adalah **jalur hapusnya**, bukan
+jalur unggahnya.
 
 `probe-admin-shell.mjs` mengukur jumlah `<main>`, keberadaan header/footer situs,
 kursor kustom, Lenis, dan **luas tumpang tindih** antara merek situs dan judul
@@ -1000,10 +1099,11 @@ dipisahkan tanpa membuka log:
 
 | Yang Anda lihat | Sebabnya | Tindakan |
 | --- | --- | --- |
-| "Penyimpanan gambar belum dikonfigurasi…" | Kredensial Cloudinary kosong | Isi ketiga `CLOUDINARY_*`, mulai ulang server |
+| "Penyimpanan gambar belum aktif. Basis data belum dikonfigurasi…" | `DATABASE_URL` kosong | Isi `DATABASE_URL`, jalankan migrasi, mulai ulang server |
 | "Ukuran gambar melebihi 8 MB." | Berkas terlalu besar — ditolak di peramban, **tidak dikirim** | Perkecil gambarnya |
 | "Format gambar harus JPG, PNG, WebP, atau AVIF." | Tipe berkas di luar daftar | Ubah formatnya |
 | "Gambar gagal diunggah. Periksa koneksi Anda…" | Permintaan gagal di jalan, sebelum action berjalan | Coba lagi; kalau tetap, periksa log server |
+| "Gambar gagal disimpan. Silakan coba lagi." | Basis data menolak penulisan — sering berarti kuota penuh | Periksa pemakaian di halaman **Pengaturan** |
 
 Pemberitahuan "Unggah gambar belum aktif" di sidebar menandakan baris pertama
 bahkan sebelum Anda mencoba mengunggah.
@@ -1014,8 +1114,11 @@ Kalau unggahan **berhasil** tetapi gambarnya tidak tampil:
 2. Ingat bahwa halaman depan hanya memuat **6 foto pertama**, diurutkan dari
    angka Urutan terkecil. Beri angka kecil (misalnya `0` atau `1`) agar foto
    baru langsung terlihat di beranda.
-3. Periksa `next.config.ts` → `images.remotePatterns` sudah memuat
-   `res.cloudinary.com`.
+3. Buka URL gambarnya langsung di tab baru (klik kanan → *Open image in new
+   tab*). Kalau berbunyi "Gambar tidak ditemukan.", barisnya hilang dari tabel
+   `MediaAsset` — biasanya karena item dihapus lebih dulu. Kalau gambarnya
+   tampil di tab itu tetapi tidak di halaman, masalahnya ada di tata letak
+   (angka Urutan atau status terbit), bukan di penyimpanan.
 
 ### Perubahan dari admin tidak muncul di situs
 
@@ -1093,12 +1196,11 @@ Cara menjalankannya di kode:
 
 **Font** (semuanya SIL Open Font License 1.1, boleh dipakai komersial):
 
-- Instrument Serif — © Instrument, SIL OFL 1.1
 - Instrument Sans — © Instrument, SIL OFL 1.1
 - JetBrains Mono — © JetBrains, SIL OFL 1.1
 
 **Pustaka utama:** Next.js (MIT), React (MIT), Prisma (Apache-2.0),
 Tailwind CSS (MIT), GSAP (standard "no charge" license), Lenis (MIT),
-Cloudinary SDK (MIT), Supabase JS (MIT).
+sharp (Apache-2.0), Supabase JS (MIT).
 
 **Konten sekolah:** hak milik SMK Jayanegara.

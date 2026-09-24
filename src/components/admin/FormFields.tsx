@@ -373,8 +373,8 @@ export function DeleteButton({
  * administrator sees the image before committing the record, and a failed upload
  * cannot leave a saved row pointing at nothing.
  *
- * The public id travels with the URL because Cloudinary needs the id — not the
- * URL — to delete an asset later.
+ * The public id travels with the URL because the media store is keyed by id —
+ * not by URL — so the id is what makes deletion possible later.
  *
  * ## Why the rules are applied twice
  *
@@ -479,9 +479,12 @@ export function ImageUploadField({
           )}
         >
           {url ? (
-            // A plain <img> rather than next/image: the source is a remote
-            // Cloudinary URL supplied by the administrator, and the optimiser
-            // would need every possible hostname allow-listed in next.config.
+            // A plain <img> rather than next/image: the value can be any URL
+            // the administrator pasted, and the optimiser would need every
+            // possible hostname allow-listed in next.config. Uploaded images
+            // arrive as same-origin `/api/media/<id>` paths, which the
+            // optimiser could handle — but this field also renders the pasted
+            // case, so it stays a plain <img> for both.
             // eslint-disable-next-line @next/next/no-img-element
             <img src={url} alt="" className="h-full w-full object-cover" />
           ) : (

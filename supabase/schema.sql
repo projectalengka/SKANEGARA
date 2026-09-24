@@ -200,6 +200,32 @@ CREATE TABLE IF NOT EXISTS "SiteSection" (
 CREATE UNIQUE INDEX IF NOT EXISTS "SiteSection_key_key" ON "SiteSection" (key);
 
 
+-- ---------------------------------------------------------------------------
+-- 8. Gambar yang diunggah dari dasbor
+-- ---------------------------------------------------------------------------
+--
+-- Bytes-nya ada di sini, bukan di layanan penyimpanan pihak ketiga. Lihat
+-- komentar model `MediaAsset` di prisma/schema.prisma untuk alasannya.
+--
+-- `data` berisi gambar yang **sudah dikodekan ulang** (WebP, sisi panjang
+-- maksimal 2400 px) — bukan berkas asli yang diunggah. `bytes` menduplikasi
+-- `octet_length(data)` dengan sengaja: laporan pemakaian penyimpanan jadi satu
+-- agregat yang murah, bukan pemindaian yang menarik setiap foto ke memori.
+CREATE TABLE IF NOT EXISTS "MediaAsset" (
+    id          TEXT        NOT NULL DEFAULT gen_random_uuid()::text,
+    filename    TEXT        NOT NULL DEFAULT '',
+    folder      TEXT        NOT NULL DEFAULT 'umum',
+    "mimeType"  TEXT        NOT NULL,
+    width       INTEGER     NOT NULL DEFAULT 0,
+    height      INTEGER     NOT NULL DEFAULT 0,
+    bytes       INTEGER     NOT NULL,
+    data        BYTEA       NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "MediaAsset_pkey" PRIMARY KEY (id)
+);
+
+
 -- ============================================================================
 -- Pemeriksaan setelah menjalankan
 -- ============================================================================
@@ -211,11 +237,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS "SiteSection_key_key" ON "SiteSection" (key);
 --       (SELECT count(*) FROM "GalleryItem")   AS galeri,
 --       (SELECT count(*) FROM "Event")         AS kegiatan,
 --       (SELECT count(*) FROM "StudentWork")   AS karya,
---       (SELECT count(*) FROM "SiteSection")   AS bagian;
+--       (SELECT count(*) FROM "SiteSection")   AS bagian,
+--       (SELECT count(*) FROM "MediaAsset")    AS gambar;
 --
 -- Setelah `npm run db:seed`, yang diharapkan:
 --
---     profil 1 · program 2 · berita 0 · galeri 6 · kegiatan 0 · karya 6 · bagian ~11
+--     profil 1 · program 2 · berita 0 · galeri 6 · kegiatan 0 · karya 6 · bagian ~11 · gambar 0
 --
 -- Berita dan kegiatan memang **0**. Itu bukan kegagalan seed — mengarang berita
 -- sekolah akan melanggar aturan konten proyek ini. Isilah lewat Dasbor Admin.

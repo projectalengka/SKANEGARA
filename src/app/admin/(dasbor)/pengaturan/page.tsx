@@ -1,6 +1,6 @@
 import { getSchoolProfile } from '@/lib/content';
 import { isAuthConfigured } from '@/lib/auth';
-import { isCloudinaryConfigured } from '@/lib/cloudinary';
+import { formatBytes, isMediaStorageConfigured, mediaUsage } from '@/lib/media';
 import { contentMode } from '@/lib/content';
 import { isDatabaseConfigured } from '@/lib/db';
 import { AdminHeading, AdminPanel } from '@/components/admin/AdminShell';
@@ -8,6 +8,18 @@ import { siteUrl } from '@/lib/utils';
 
 export const metadata = { title: 'Pengaturan' };
 export const dynamic = 'force-dynamic';
+
+/**
+ * The database size the storage report measures against.
+ *
+ * Supabase's free tier gives 500 MB, and the images share it with every article,
+ * programme and caption on the site. Stated here rather than hidden, because the
+ * failure it warns about is not "uploads stop" — once the database is full,
+ * *every write on the site* starts failing, and tracing that back to a
+ * photograph uploaded months earlier is not something the owner should have to
+ * do. If the project moves to a paid plan, this is the one number to change.
+ */
+const STORAGE_QUOTA_BYTES = 500 * 1024 * 1024;
 
 /**
  * The settings screen.
@@ -22,7 +34,9 @@ export const dynamic = 'force-dynamic';
  * tersambung" is not useful; "perubahan Anda tidak akan tersimpan" is.
  */
 export default async function AdminSettingsPage() {
-  const profile = await getSchoolProfile();
+  const [profile, usage] = await Promise.all([getSchoolProfile(), mediaUsage()]);
+
+  const usedPercent = usage ? Math.min(100, (usage.bytes / STORAGE_QUOTA_BYTES) * 100) : 0;
 
   const checks = [
     {
@@ -40,11 +54,15 @@ export default async function AdminSettingsPage() {
       failMessage: 'Belum dikonfigurasi. Dasbor tidak dapat diakses.',
     },
     {
-      label: 'Penyimpanan gambar (Cloudinary)',
-      configured: isCloudinaryConfigured(),
-      env: ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'],
-      okMessage: 'Siap menerima unggahan gambar.',
-      failMessage: 'Belum dikonfigurasi. Unggah gambar tidak akan berfungsi.',
+      // Deliberately the same switch as "Basis data" — uploads go into that
+      // database now. The message says so out loud, because two rows with one
+      // cause would otherwise read as two independent settings, and the owner
+      // would go looking for a second thing to configure that does not exist.
+      label: 'Penyimpanan gambar',
+      configured: isMediaStorageConfigured(),
+      env: ['DATABASE_URL'],
+      okMessage: 'Aktif. Gambar disimpan di basis data yang sama dengan konten situs.',
+      failMessage: 'Belum aktif. Unggah gambar tidak akan berfungsi sebelum basis data tersambung.',
     },
     {
       label: 'URL situs',
@@ -108,6 +126,58 @@ export default async function AdminSettingsPage() {
               </li>
             ))}
           </ul>
+        </AdminPanel>
+
+        <AdminPanel title="Penyimpanan Gambar">
+          {usage ? (
+            <>
+              <dl className="flex flex-wrap gap-x-12 gap-y-6">
+                <div>
+                  <dt className="label text-[var(--color-text-muted)]">Jumlah gambar</dt>
+                  <dd className="display mt-2 text-[length:var(--step-4)]">{usage.count}</dd>
+                </div>
+                <div>
+                  <dt className="label text-[var(--color-text-muted)]">Terpakai gambar</dt>
+                  <dd className="display mt-2 text-[length:var(--step-4)]">
+                    {formatBytes(usage.bytes)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="label text-[var(--color-text-muted)]">Kuota basis data</dt>
+                  <dd className="display mt-2 text-[length:var(--step-4)]">
+                    {formatBytes(STORAGE_QUOTA_BYTES)}
+                  </dd>
+                </div>
+              </dl>
+
+              {/*
+                A bar, not just a number: the point of this panel is to make a
+                quota visible before it becomes a problem. A figure like "12 MB"
+                reads as nothing; the same figure as a sliver of a bar reads as
+                "there is room".
+              */}
+              <div className="mt-7 h-1.5 w-full bg-[var(--color-paper-warm)]">
+                <div
+                  className="h-full bg-[var(--color-accent)]"
+                  style={{ width: `${usage.count > 0 ? Math.max(usedPercent, 0.5) : 0}%` }}
+                />
+              </div>
+              <p className="mt-3 font-[family-name:var(--font-mono)] text-[length:var(--step--1)] text-[var(--color-text-muted)]">
+                {usedPercent.toFixed(2)}% dari kuota terpakai oleh gambar
+              </p>
+
+              <p className="mt-6 border-t border-[var(--color-line)] pt-5 text-[length:var(--step-0)] text-[var(--color-text-muted)]">
+                Angka di atas hanya menghitung gambar. Teks artikel, program, dan profil sekolah
+                memakai kuota basis data yang sama, jadi pemakaian sebenarnya selalu lebih besar
+                dari ini. Setiap gambar dikecilkan dan dikodekan ulang ke WebP sebelum disimpan,
+                sehingga satu foto ponsel biasanya memakai kurang dari 300 KB.
+              </p>
+            </>
+          ) : (
+            <p className="text-[var(--color-text-muted)]">
+              Pemakaian penyimpanan belum dapat dibaca karena basis data belum tersambung.
+            </p>
+          )}
         </AdminPanel>
 
         <AdminPanel title="SEO & Metadata">

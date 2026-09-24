@@ -27,15 +27,39 @@
  */
 
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
 const schema = readFileSync(new URL('../prisma/schema.prisma', import.meta.url), 'utf8');
-const migrationUrl = new URL('../prisma/migrations/20260918000000_init/migration.sql', import.meta.url);
+const migrationsDir = new URL('../prisma/migrations/', import.meta.url);
+const initMigrationUrl = new URL('../prisma/migrations/20260918000000_init/migration.sql', import.meta.url);
 const lockUrl = new URL('../prisma/migrations/migration_lock.toml', import.meta.url);
 const referenceUrl = new URL('../supabase/schema.sql', import.meta.url);
 
 const read = (url: URL): string => readFileSync(url, 'utf8');
+
+/**
+ * Every migration, concatenated in filename order.
+ *
+ * This used to read the init migration alone, which was correct while exactly
+ * one existed. The second migration (`20260924000000_add_media_asset`, which
+ * moved image storage into the database) broke that assumption — and broke it
+ * into a *misleading* failure: `MediaAsset` was reported as "a model the
+ * migration does not create", when in fact it was created, by the other file.
+ * A gate that inspects only the first migration will keep raising that false
+ * alarm for every future migration, so it now reads the whole directory.
+ *
+ * The known limitation: a later migration that *drops* a column would still
+ * appear to have created it here. That is acceptable — the alternative is a SQL
+ * parser — and it fails safe, in the direction of "the migration looks fine".
+ */
+function allMigrations(): string {
+  return readdirSync(migrationsDir)
+    .filter((name) => /^\d/.test(name))
+    .sort()
+    .map((name) => readFileSync(new URL(`${name}/migration.sql`, migrationsDir), 'utf8'))
+    .join('\n');
+}
 
 /** Model names declared in `schema.prisma`. */
 function schemaModels(): string[] {
@@ -63,13 +87,14 @@ function columns(source: string, pattern: RegExp): Record<string, string[]> {
   return out;
 }
 
-const migration = () => read(migrationUrl);
+const migration = () => allMigrations();
+const initMigration = () => read(initMigrationUrl);
 const migrationColumns = () => columns(migration(), /CREATE TABLE "(\w+)" \(([\s\S]*?)\n\);/g);
 
 describe('the migration exists at all', () => {
   it('has a migrations directory with an init migration', () => {
     assert.ok(
-      existsSync(migrationUrl),
+      existsSync(initMigrationUrl),
       'prisma/migrations/20260918000000_init/migration.sql is missing — `db:deploy` would silently do nothing',
     );
   });
@@ -126,7 +151,11 @@ describe('the migration matches the schema', () => {
   });
 
   it('contains no destructive statement', () => {
-    const sql = migration();
+    // Scoped to the init migration on purpose. Its job is to build the database
+    // from nothing, so a DROP or a DELETE in it is a mistake — and `db:deploy`
+    // runs it against production. A later migration is allowed to remove
+    // something deliberately; that decision is reviewed when it is written.
+    const sql = initMigration();
     assert.ok(!/\bDROP\s+TABLE\b/i.test(sql), 'an init migration must not drop a table');
     assert.ok(!/\bDROP\s+COLUMN\b/i.test(sql), 'an init migration must not drop a column');
     assert.ok(!/\bTRUNCATE\b/i.test(sql), 'an init migration must not truncate');

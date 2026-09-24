@@ -16,6 +16,7 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "db:verify": "tsx scripts/verify-db.ts",
+    "media:bersihkan": "tsx scripts/clean-media.ts",
     "images": "tsx scripts/make-placeholders.ts",
     "verify:build": "tsx scripts/verify-build.ts",
     "qa": "npm run check && npm run lint && npm test && npm run build && npm run verify:build",
@@ -28,13 +29,13 @@
     "@prisma/client": "7.10.0",
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.116.0",
-    "cloudinary": "2.11.0",
     "gsap": "3.15.0",
     "lenis": "1.3.26",
     "next": "16.3.5",
     "pg": "^8.23.0",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "sharp": "^0.35.4"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.7",

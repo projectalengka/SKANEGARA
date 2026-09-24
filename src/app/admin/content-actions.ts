@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath, revalidateTag } from 'next/cache';
-import { deleteImage, uploadImage } from '@/lib/cloudinary';
+import { deleteImage, uploadImage } from '@/lib/media';
 import { getPrisma } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { slugify } from '@/lib/utils';
@@ -153,8 +153,8 @@ function readInt(formData: FormData, key: string): number | null {
  * Uploads one image and returns its URL plus public id.
  *
  * The public id is returned alongside the URL because it is what makes deletion
- * possible: Cloudinary needs the id, not the URL, and an asset whose id was never
- * stored can only be removed by hand from the Cloudinary console.
+ * possible: the media store is keyed by id, not by URL, and an asset whose id
+ * was never stored can only be found by hand in the database.
  */
 export async function uploadContentImage(
   formData: FormData,
@@ -305,8 +305,8 @@ export async function deleteProgram(id: string): Promise<ActionResult> {
     await prisma.program.delete({ where: { id } });
 
     // The image is deleted after the row, and a failure is only logged. Leaving
-    // an orphan in Cloudinary costs kilobytes; leaving a row that points at a
-    // deleted asset shows a broken image on the public site.
+    // an orphan in the media table costs kilobytes of quota; leaving a row that
+    // points at a deleted asset shows a broken image on the public site.
     if (existing.imagePublicId) {
       await deleteImage(existing.imagePublicId);
     }
@@ -462,7 +462,20 @@ export async function saveGalleryItem(formData: FormData): Promise<ActionResult>
     const data = {
       title,
       image,
-      publicId: read(formData, 'publicId'),
+      /*
+       * `imagePublicId`, bukan `publicId`.
+       *
+       * `ImageUploadField name="image"` memancarkan dua input tersembunyi:
+       * `image` (URL-nya) dan `imagePublicId` (id asetnya) — lihat
+       * FormFields.tsx. Membaca `'publicId'` di sini berarti kolom itu selalu
+       * kosong, dan akibatnya `deleteImage()` pada `deleteGalleryItem` tidak
+       * pernah berjalan: setiap foto galeri yang dihapus atau diganti
+       * meninggalkan asetnya di basis data **selamanya**.
+       *
+       * Terukur 24 September 2026 lewat `npm run media:bersihkan`: empat aset
+       * uji, `dirujuk konten: 0`. Diuji oleh tests/media.test.ts.
+       */
+      publicId: read(formData, 'imagePublicId'),
       category: read(formData, 'category') || 'Umum',
       description: read(formData, 'description'),
       order: readInt(formData, 'order') ?? 0,
@@ -534,7 +547,8 @@ export async function saveStudentWork(formData: FormData): Promise<ActionResult>
       category: read(formData, 'category') || 'Desain Komunikasi Visual',
       description: read(formData, 'description'),
       image,
-      publicId: read(formData, 'publicId'),
+      // `imagePublicId` — sama alasannya dengan `saveGalleryItem` di atas.
+      publicId: read(formData, 'imagePublicId'),
       year: readInt(formData, 'year'),
       order: readInt(formData, 'order') ?? 0,
       published: readBool(formData, 'published'),
@@ -613,6 +627,9 @@ export async function saveEvent(formData: FormData): Promise<ActionResult> {
       slug,
       description: read(formData, 'description'),
       image: read(formData, 'image'),
+      // `publicId`, bukan `imagePublicId`: kegiatan memakai kolom URL biasa,
+      // bukan `ImageUploadField`, jadi nama inputnya memang `publicId` — lihat
+      // EventManager.tsx. tests/media.test.ts mengunci pasangan nama ini.
       publicId: read(formData, 'publicId'),
       date: date as Date,
       endDate: endDate && !Number.isNaN(endDate.getTime()) ? endDate : null,

@@ -6,7 +6,8 @@
  * about who studies there. These are deliberate, neutral, obviously-a-
  * placeholder compositions in the site's own palette — they hold the right
  * aspect ratio, the right tonal weight and the right amount of visual noise, so
- * the composition can be judged honestly. Replacing them is a Cloudinary upload.
+ * the composition can be judged honestly. Replacing them is an upload through
+ * the dashboard.
  *
  * They are drawn rather than embedded as base64 so the file stays small enough
  * to read and the intent stays legible.

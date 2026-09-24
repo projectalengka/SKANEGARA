@@ -30,8 +30,12 @@ export function AdminShell({
   email: string;
   mode: 'database' | 'seed';
   /**
-   * Whether Cloudinary credentials are present, so images can actually be
-   * uploaded.
+   * Whether image storage is usable, so images can actually be uploaded.
+   *
+   * Storage is the project's own database now, so in practice this tracks
+   * `DATABASE_URL` — but it is passed in rather than derived here, because
+   * "the database is reachable" and "uploads can work" are separate questions
+   * and this component only needs the answer to the second one.
    *
    * Reported here for the same reason the sample switch is: without it, the
    * upload field looks like it works. Choosing a file produces a progress
@@ -155,10 +159,9 @@ export function AdminShell({
             <div className="mt-3 border border-[var(--color-accent-deep)] px-3 py-3">
               <p className="label text-[var(--color-accent-deep)]">Unggah gambar belum aktif</p>
               <p className="mt-2 text-[length:var(--step--1)] text-[var(--color-text-muted)]">
-                Kredensial Cloudinary belum diisi, jadi gambar tidak dapat diunggah. Isi{' '}
-                <code>CLOUDINARY_CLOUD_NAME</code>, <code>CLOUDINARY_API_KEY</code>, dan{' '}
-                <code>CLOUDINARY_API_SECRET</code> di berkas <code>.env</code>, lalu mulai ulang
-                server. Langkahnya ada di <strong>README.md</strong> bagian 5.
+                Gambar disimpan di basis data, jadi unggahan butuh koneksi basis data. Isi{' '}
+                <code>DATABASE_URL</code> di berkas <code>.env</code>, jalankan migrasi, lalu mulai
+                ulang server. Langkahnya ada di <strong>README.md</strong> bagian 5.
               </p>
             </div>
           ) : null}

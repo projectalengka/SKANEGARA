@@ -32,10 +32,17 @@ const config: NextConfig = {
   },
   images: {
     formats: ['image/avif', 'image/webp'],
-    remotePatterns: [
-      { protocol: 'https', hostname: 'res.cloudinary.com' },
-      { protocol: 'https', hostname: '*.supabase.co' },
-    ],
+    /**
+     * Uploaded images are served from this same origin (`/api/media/<id>`), so
+     * they need no entry here at all — `next/image` optimises them locally.
+     *
+     * The Supabase entry stays for the one path that is still remote: the news
+     * editor accepts a pasted image URL, and `next/image` refuses to optimise a
+     * host it was not told about. `res.cloudinary.com` used to be listed beside
+     * it and was removed on 2026-09-24 with the Cloudinary backend; leaving it
+     * would have quietly permitted a host the project no longer uses.
+     */
+    remotePatterns: [{ protocol: 'https', hostname: '*.supabase.co' }],
   },
   async headers() {
     return [

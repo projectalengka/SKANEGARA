@@ -33,32 +33,27 @@
  */
 
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
+import { code, exists, read } from './source';
 import { UPLOAD_LIMITS, uploadError, uploadSizeLabel } from '../src/lib/upload-limits';
-
-const rootUrl = new URL('../', import.meta.url);
-const read = (relative: string) => readFileSync(new URL(relative, rootUrl), 'utf8');
-const exists = (relative: string) => existsSync(new URL(relative, rootUrl));
-
-/**
- * Source with comments removed.
- *
- * Assertions about what a file *renders* must not be satisfiable by what it
- * *says*: the first draft of these tests failed because `src/app/layout.tsx`
- * explains, in a comment, that the dashboard used to contain two `<main>`
- * elements — and a naive `/<main\b/` matched the prose. Comments are where the
- * reasoning lives in this project, so they are long by design, and a test that
- * reads them is a test that will keep lying.
- */
-const code = (relative: string) =>
-  read(relative)
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    // `://` is skipped so a URL in a string is not mistaken for a comment.
-    .replace(/(^|[^:])\/\/[^\n]*/gm, '$1');
 
 // ---------------------------------------------------------------------------
 // 1. The rules themselves
+
+describe('the shared upload rules', () => {
+  it('import nothing, so the browser bundle stays clean', () => {
+    // This module is read by a client component *and* by the server. It used to
+    // live beside the server-side storage code, and importing that from the
+    // browser would have pulled a server-only dependency — and, in the
+    // Cloudinary days, the credentials it reads — into the bundle. Keeping the
+    // file import-free is what makes sharing it safe, so the property is
+    // asserted rather than remembered.
+    assert.ok(
+      !/^\s*import\b/m.test(code('src/lib/upload-limits.ts')),
+      'src/lib/upload-limits.ts must have no imports — it is read by a client component',
+    );
+  });
+});
 
 describe('uploadError()', () => {
   const file = (size: number, type: string) => ({ size, type });

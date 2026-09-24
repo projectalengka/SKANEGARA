@@ -3,12 +3,12 @@
  *
  * ## Why this is its own module
  *
- * The rules used to live in `src/lib/cloudinary.ts`, next to the code that
- * enforces them on the server. That was fine while the server was the only
- * caller. It stopped being fine the moment the browser needed to apply the same
- * rules *before* sending anything: importing `cloudinary.ts` from a client
- * component would pull the Cloudinary SDK — and the credentials it reads — into
- * the browser bundle.
+ * The rules used to live in the storage module, next to the code that enforces
+ * them on the server. That was fine while the server was the only caller. It
+ * stopped being fine the moment the browser needed to apply the same rules
+ * *before* sending anything: importing the server module from a client component
+ * would pull a server-only dependency — and, in the Cloudinary days, the
+ * credentials it read — into the browser bundle.
  *
  * So the numbers live here, with no imports at all, and both sides read them
  * from here. There is exactly one definition of "8 MB", and a change to it

@@ -15,7 +15,7 @@ export default async function AdminGalleryPage() {
       <AdminHeading
         eyebrow="Konten"
         title="Galeri"
-        description="Unggah dan atur foto galeri. Foto tersimpan di Cloudinary, bukan di server, sehingga tidak hilang saat situs diperbarui."
+        description="Unggah dan atur foto galeri. Foto disimpan di basis data situs, bukan sebagai berkas di server, sehingga tidak hilang saat situs diperbarui."
       />
 
       {!configured ? (

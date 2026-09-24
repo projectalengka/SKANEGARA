@@ -79,3 +79,42 @@ export type StudentWork = Prisma.StudentWorkModel
  * redeploy: the brief is explicit that copy must be changeable through the CMS.
  */
 export type SiteSection = Prisma.SiteSectionModel
+/**
+ * Model MediaAsset
+ * An uploaded image, stored as bytes in Postgres.
+ * 
+ * ## Why the bytes are here and not in object storage
+ * 
+ * The first version of this project sent uploads to Cloudinary. That required a
+ * third account and three credentials before a single photograph could be
+ * uploaded, and the cost of that friction was measured on 2026-09-24: the
+ * credentials were still empty months in, so the feature had never once worked.
+ * 
+ * Postgres was already here. Images now live in the database that holds the
+ * content, which means the only thing standing between a fresh install and a
+ * working upload is `DATABASE_URL` — a variable that has to be set anyway for
+ * the site to have any content at all.
+ * 
+ * ## What that trades away
+ * 
+ * - **A quota.** Supabase's free tier gives 500 MB of database, shared with the
+ * text content. That is why uploads are re-encoded before they are stored —
+ * see `src/lib/media.ts` — and why `/admin/pengaturan` reports how much has
+ * been used. An unmonitored quota fills up silently and then breaks *writes
+ * to the whole site*, not just uploads.
+ * - **A CDN.** Delivery is a route handler (`/api/media/[id]`), cached
+ * immutably at the edge. For a school site's traffic that is not a
+ * measurable difference.
+ * 
+ * ## Why the columns look like this
+ * 
+ * - `data` is `Bytes` (Postgres `bytea`) and holds the encoded image, never the
+ * original upload. `bytes` duplicates `octet_length(data)` on purpose: it
+ * lets the storage report be a single indexed aggregate instead of a scan
+ * that pulls every photograph into memory to measure it.
+ * - `filename` and `folder` are kept for humans reading the database, not for
+ * the application — nothing routes or resolves by them.
+ * - There is no `updatedAt`, because an asset is immutable once written. The
+ * URL is stable and the cache headers say so.
+ */
+export type MediaAsset = Prisma.MediaAssetModel

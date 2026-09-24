@@ -57,7 +57,8 @@ export const ModelName = {
   GalleryItem: 'GalleryItem',
   Event: 'Event',
   StudentWork: 'StudentWork',
-  SiteSection: 'SiteSection'
+  SiteSection: 'SiteSection',
+  MediaAsset: 'MediaAsset'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -198,6 +199,21 @@ export const SiteSectionScalarFieldEnum = {
 } as const
 
 export type SiteSectionScalarFieldEnum = (typeof SiteSectionScalarFieldEnum)[keyof typeof SiteSectionScalarFieldEnum]
+
+
+export const MediaAssetScalarFieldEnum = {
+  id: 'id',
+  filename: 'filename',
+  folder: 'folder',
+  mimeType: 'mimeType',
+  width: 'width',
+  height: 'height',
+  bytes: 'bytes',
+  data: 'data',
+  createdAt: 'createdAt'
+} as const
+
+export type MediaAssetScalarFieldEnum = (typeof MediaAssetScalarFieldEnum)[keyof typeof MediaAssetScalarFieldEnum]
 
 
 export const SortOrder = {

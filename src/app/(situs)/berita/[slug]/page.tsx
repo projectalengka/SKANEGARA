@@ -114,9 +114,9 @@ export default async function NewsDetailPage({
     dateModified: published,
     articleSection: article.category,
     // Schema.org wants an absolute URL. The cover can be either a local seed
-    // asset (`/images/…`) or a fully-qualified Cloudinary URL — and blindly
-    // prefixing produced `https://site.comhttps://res.cloudinary.com/…` for
-    // every uploaded image. `absoluteUrl()` already knows how to join the two.
+    // asset (`/images/…`) or a fully-qualified external URL — and blindly
+    // prefixing produced `https://site.comhttps://example.com/…` for every
+    // pasted image. `absoluteUrl()` already knows how to join the two.
     image: article.coverImage ? [absoluteUrl(article.coverImage)] : undefined,
     author: { '@type': 'Organization', name: profile.schoolName },
     publisher: {

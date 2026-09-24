@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { requireSession } from '@/lib/session';
 import { contentMode, getSchoolProfile, sampleMode, sampleRawValue } from '@/lib/content';
-import { isCloudinaryConfigured } from '@/lib/cloudinary';
+import { isMediaStorageConfigured } from '@/lib/media';
 import { AdminShell } from '@/components/admin/AdminShell';
 
 export const metadata: Metadata = {
@@ -35,7 +35,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <AdminShell
       email={session.email}
       mode={contentMode()}
-      storage={isCloudinaryConfigured()}
+      storage={isMediaStorageConfigured()}
       schoolName={profile.schoolName}
       sample={sampleMode()}
       sampleRaw={sampleRawValue()}

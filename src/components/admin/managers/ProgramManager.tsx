@@ -31,7 +31,7 @@ import { cn } from '@/lib/utils';
  * form keeps the context — you can see the other programmes while editing one.
  *
  * The upload action is bound per-field so the field does not need to know which
- * Cloudinary folder it belongs to; that decision stays here, where it is obvious.
+ * storage folder it belongs to; that decision stays here, where it is obvious.
  */
 export function ProgramManager({ programs }: { programs: ProgramContent[] }) {
   const [openId, setOpenId] = useState<string | null>(null);

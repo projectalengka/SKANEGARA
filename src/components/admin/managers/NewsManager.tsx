@@ -319,10 +319,11 @@ export function NewsForm({
                   type="url"
                   defaultValue={article?.coverImage ?? ''}
                   className="field__input mt-2"
-                  placeholder="https://res.cloudinary.com/..."
+                  placeholder="/api/media/… atau https://…"
                 />
                 <p className="field__hint mt-2">
-                  Kosongkan bila belum ada gambar. Isi kolom ini dengan URL gambar dari Cloudinary.
+                  Kosongkan bila belum ada gambar. Kolom ini untuk gambar dari luar; untuk gambar
+                  yang diunggah sendiri, pakai panel unggah di atas.
                 </p>
                 {article?.coverImage ? (
                   <div className="relative mt-4 aspect-3/2 w-full max-w-md overflow-hidden border border-[var(--color-line)]">

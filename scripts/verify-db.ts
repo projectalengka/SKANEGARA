@@ -19,7 +19,11 @@
  *   3. Bentuk data hasil seed sesuai harapan — termasuk yang harus **nol**:
  *      berita dan kegiatan, karena mengarang agenda sekolah adalah pelanggaran
  *      aturan konten proyek ini.
- *   4. `readOrFallback()` benar-benar menimpa dengan data basis data, bukan
+ *   4. Penyimpanan gambar melaporkan angkanya dengan jujur. Kolom `bytes` harus
+ *      sama dengan panjang `data`-nya, karena laporan kuota di dasbor adalah
+ *      satu agregat di atas kolom itu — dan kuota yang salah lapor berakhir
+ *      sebagai kegagalan penulisan yang sulit ditelusuri.
+ *   5. `readOrFallback()` benar-benar menimpa dengan data basis data, bukan
  *      hanya tidak meledak.
  */
 
@@ -100,6 +104,7 @@ async function main(): Promise<void> {
       ['kegiatan', () => prisma.event.count()],
       ['karya', () => prisma.studentWork.count()],
       ['bagian', () => prisma.siteSection.count()],
+      ['gambar', () => prisma.mediaAsset.count()],
     ] as const;
 
     const counts: Record<string, number> = {};
@@ -184,7 +189,52 @@ async function main(): Promise<void> {
     }
 
     // -----------------------------------------------------------------------
-    // 4. Lapisan overlay benar-benar menimpa.
+    // 4. Penyimpanan gambar: laporan pemakaiannya harus jujur.
+    // -----------------------------------------------------------------------
+
+    console.log('\n  Penyimpanan gambar:');
+
+    const { formatBytes, mediaUsage } = await import('../src/lib/media');
+
+    const usage = await mediaUsage();
+    check(
+      'pemakaian terbaca',
+      usage !== null,
+      usage
+        ? `${usage.count} gambar, ${formatBytes(usage.bytes)} — kuota 500 MB`
+        : 'tidak terbaca (basis data belum dikonfigurasi)',
+    );
+
+    /*
+     * `bytes` adalah salinan `octet_length(data)` yang disimpan sebagai kolom.
+     * Halaman Pengaturan melaporkan pemakaian lewat satu agregat di atas kolom
+     * itu, jadi kalau keduanya berbeda, laporannya berbohong — dan laporan itu
+     * satu-satunya hal yang berdiri antara pemilik dan kuota yang penuh
+     * diam-diam. Yang diambil gambar terkecil, supaya pemeriksaan ini tidak
+     * menarik foto besar ke memori hanya untuk mengukurnya.
+     */
+    const sample = await prisma.mediaAsset.findFirst({
+      orderBy: { bytes: 'asc' },
+      select: { id: true, bytes: true, data: true, mimeType: true },
+    });
+
+    if (!sample) {
+      ok('akuntansi byte', 'belum ada gambar — tidak ada yang bisa diperiksa');
+    } else {
+      check(
+        'akuntansi byte',
+        sample.data.length === sample.bytes,
+        `kolom bytes (${sample.bytes}) == panjang data (${sample.data.length})`,
+      );
+      check(
+        'tipe berkas tercatat',
+        sample.mimeType.startsWith('image/'),
+        `${sample.mimeType} pada ${sample.id}`,
+      );
+    }
+
+    // -----------------------------------------------------------------------
+    // 5. Lapisan overlay benar-benar menimpa.
     // -----------------------------------------------------------------------
 
     console.log('\n  Lapisan konten:');
