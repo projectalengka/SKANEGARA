@@ -86,7 +86,13 @@ try {
     for (const p of placeholders) console.log(`      sisa: ${p}`);
   }
 
-  console.log(`\nringkasan: ${totalPlaceholder} placeholder tersisa, ${totalSample} penanda [CONTOH]\n`);
+  /*
+    Tanpa `\n` di ujung: baris kosong terakhir membuat `| tail -1` membaca
+    kekosongan alih-alih ringkasannya, dan pembungkus yang menunggu angka akan
+    menyimpulkan "siap" dari keluaran kosong. Itu pernah terjadi — skrip pemantau
+    melaporkan deploy selesai padahal ia tidak membaca apa pun.
+  */
+  console.log(`ringkasan: ${totalPlaceholder} placeholder tersisa, ${totalSample} penanda [CONTOH]`);
 
   await context.close();
 } finally {
