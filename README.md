@@ -1019,6 +1019,55 @@ sidebar dalam piksel persegi:
 | Lenis mengambil alih gulir | ya | tidak |
 | Tumpang tindih merek × judul | **2079 px²** | 0 |
 
+### Mengukur rasio dan ukuran gambar
+
+`outputs/probe-image-ratios.mjs` menjawab pertanyaan "gambar sebesar apa yang
+harus saya siapkan?" dengan mengukur, bukan menebak. Ia membuka delapan rute pada
+enam lebar layar (320–1920 px) lalu melaporkan kotak setiap gambar beserta rasio
+yang **benar-benar tergambar**.
+
+```bash
+BASE=https://skagara.vercel.app node outputs/probe-image-ratios.mjs
+```
+
+Dua jebakan yang sudah memakan waktu saat menulisnya:
+
+- **Rasio tidak selalu ada di induk langsung `<img>`.** Di galeri, `next/image`
+  dengan `fill` duduk di dalam `<span class="absolute inset-0">`, dan
+  `aspect-ratio`-nya ada di **kakek**-nya. Mengukur induk langsung menghasilkan
+  `aspect-ratio: auto` — angka yang benar, tetapi milik elemen yang salah. Karena
+  itu elemen ber-`data-image-reveal` dicari lebih dulu, baru elemen terdekat yang
+  punya rasio nyata.
+- **Ringkasan pernah memotong rasionya sendiri.** Pemisah antar kolom dulu
+  `' / '`, padahal nilai `aspect-ratio` CSS juga berbunyi `"4 / 5"` — sehingga
+  `split` mengubah `4 / 5` menjadi `4`. Sekarang pemisahnya `' ||| '`.
+
+`object-fit: cover` berarti gambar **selalu dipotong**, jadi rasio berkas yang
+diunggah tidak mengubah tampilan sama sekali — yang menentukan hanya rasio
+kotaknya. Itulah sebabnya pertanyaan "berapa rasio gambarnya?" punya jawaban
+**per slot**, bukan satu jawaban. Ringkasan rasio yang terukur:
+
+| Rasio CSS | Kotak terbesar terukur | Terkecil | Dipakai di |
+| --- | --- | --- | --- |
+| `4 / 5` | 827×1033 | 56 px | hero, kartu program, karya siswa, galeri, kegiatan |
+| `4 / 3` | 746×560 | 222 px | kisi galeri, "Sekilas Jayanegara" |
+| `3 / 2` | 1051×700 | 280 px | berita, "Hari-hari di sekolah", pita `/kegiatan` |
+| `16 / 9` | 1824×1026 | 280 px | tentang, banner program, banner berita |
+| `21 / 9` | 1824×782 | 280 px | pita foto `/kegiatan` |
+| `13 / 17` | 208×272 | 208 px | pratinjau ikut kursor (`ProgramList`, desktop) |
+| `7 / 8` | 56×64 | 56 px | thumbnail program di HP (`ProgramList`) |
+
+Bentuknya ditentukan **posisi di dalam daftar**, bukan bentuk fotonya: kisi
+galeri memakai `index % 3 === 0` → 4:5 dan sisanya 4:3, sedangkan pita
+`/kegiatan` memakai `index % 3` → 3:2, 4:5, 21:9. Nama variabelnya `isPortrait`
+tetapi **bukan** deteksi orientasi — ia hanya penomoran. Konsekuensinya urutan
+item menentukan potongan, dan urutan itu diatur dari kolom Urutan di dasbor.
+
+> Panduan praktis untuk pemilik proyek — ukuran berkas yang disarankan per bagian
+> dan aturan area aman — ada di `PANDUAN.md` bagian "Ukuran dan rasio gambar di
+> setiap bagian". Berkas itu **tidak ikut ke repositori** (lihat `.gitignore`),
+> jadi tabel di atas adalah rujukan yang tersimpan di sini.
+
 ### Memverifikasi produksi, bukan hanya localhost
 
 Semua probe di atas menerima `BASE`, jadi bisa diarahkan ke situs yang sudah
