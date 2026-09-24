@@ -367,9 +367,24 @@ try {
       await remove.click();
       await page.waitForTimeout(400);
       await remove.click();
-      await page.waitForTimeout(2500);
 
-      const stillThere = (await page.getByText(TITLE).count()) > 0;
+      // Jangan pakai jeda tetap di sini. 24 September 2026 probe ini menuduh
+      // "MASIH ADA — hapus manual" saat dijalankan terhadap produksi, padahal
+      // barisnya sudah lenyap dari basis data dan `media:bersihkan` melaporkan
+      // 0 aset: server action-nya selesai, DOM-nya yang belum sempat menyusul.
+      // Vercel + Supabase lintas wilayah butuh lebih dari 2500 ms, sementara di
+      // localhost 2500 ms selalu cukup — itulah kenapa laporan palsunya hanya
+      // muncul di produksi. Tunggu sampai barisnya benar-benar lepas.
+      await page
+        .locator('li', { hasText: TITLE })
+        .first()
+        .waitFor({ state: 'detached', timeout: 20000 })
+        .catch(() => {});
+      await page.waitForTimeout(500);
+
+      // Dihitung pada <li>, bukan `getByText`: teks judul juga hidup di dalam
+      // input formulir, dan itu membuat hitungannya tidak pernah nol.
+      const stillThere = (await page.locator('li', { hasText: TITLE }).count()) > 0;
       record('foto uji terhapus', !stillThere, stillThere ? 'MASIH ADA — hapus manual' : 'bersih');
     } else {
       record('foto uji terhapus', false, 'barisnya tidak ditemukan');

@@ -1019,6 +1019,52 @@ sidebar dalam piksel persegi:
 | Lenis mengambil alih gulir | ya | tidak |
 | Tumpang tindih merek × judul | **2079 px²** | 0 |
 
+### Memverifikasi produksi, bukan hanya localhost
+
+Semua probe di atas menerima `BASE`, jadi bisa diarahkan ke situs yang sudah
+ter-deploy. Ini penting: **kode yang ada di komputer dan kode yang ada di Vercel
+adalah dua hal berbeda sampai di-push.** Tangkapan layar pemilik proyek
+(24 September 2026) memperlihatkan pesan
+`"Penyimpanan gambar belum dikonfigurasi. Isi kredensial Cloudinary di berkas .env."`
+— kalimat yang sudah tidak ada di pohon kerja mana pun, karena `src/lib/cloudinary.ts`
+dihapus. Sumbernya ternyata deploy lama yang tertinggal dua commit.
+
+```bash
+BASE=https://skagara.vercel.app node --env-file=.env outputs/probe-admin-shell.mjs
+BASE=https://skagara.vercel.app node --env-file=.env outputs/probe-media.mjs
+```
+
+Cara memisahkan "deploy-nya lama" dari "kode barunya rusak" tanpa login — dua
+pemeriksaan HTTP yang hasilnya berbeda di kedua versi:
+
+| Pemeriksaan | Deploy lama | Deploy sekarang |
+| --- | --- | --- |
+| `GET /api/media/tidak-ada-xyz` | `text/html` — halaman 404 HTML, rutenya **tidak ada** | `text/plain` — `Gambar tidak ditemukan.` |
+| Chunk layout akar | memuat `SiteHeader`, `SmoothScroll`, `RevealObserver`, `CustomCursor` | tidak satu pun |
+
+Hasil pada deploy `ddd2d48` (24 September 2026):
+
+| Pemeriksaan | Hasil |
+| --- | --- |
+| `/admin/dasbor` tanpa login | `307` → `/admin/masuk?lanjut=%2Fadmin%2Fdasbor` |
+| `<main>` per halaman dasbor | 1 (`dasbor-konten`) |
+| Header/footer publik, kursor kustom, Lenis di dasbor | tidak ada semua |
+| Tumpang tindih merek × judul | `null px²` |
+| Pemberitahuan "Unggah gambar belum aktif" | tidak tampil — penyimpanan memang aktif |
+| `probe-media.mjs` ujung ke ujung | **17/17 langkah lolos**, 224 KB → 47 KB, `natural 742×464` |
+| Aset sesudah probe | 0 — pembersihannya ikut jalan |
+
+> **Satu gerbang di probe itu pernah memberi laporan palsu.** Langkah terakhir
+> `probe-media.mjs` dulu menunggu tetap 2500 ms lalu memeriksa barisnya masih ada
+> atau tidak. Terhadap localhost itu selalu cukup; terhadap Vercel + Supabase
+> lintas wilayah tidak — server action-nya sudah selesai dan barisnya sudah
+> lenyap dari basis data, tetapi DOM-nya belum sempat menyusul, sehingga probe
+> melaporkan `MASIH ADA — hapus manual` padahal `media:bersihkan` menunjukkan
+> 0 aset. Sekarang gerbangnya menunggu baris itu benar-benar lepas
+> (`waitFor({ state: 'detached' })`, batas 20 detik), dan menghitung pada `<li>`
+> alih-alih `getByText` — teks judulnya juga hidup di dalam input formulir, dan
+> itu membuat hitungannya tidak pernah nol.
+
 ---
 
 ## 13. Pemecahan Masalah
