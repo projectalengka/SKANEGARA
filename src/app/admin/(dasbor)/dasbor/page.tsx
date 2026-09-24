@@ -11,6 +11,7 @@ import { getPrisma, isDatabaseConfigured } from '@/lib/db';
 import { AdminHeading, AdminPanel } from '@/components/admin/AdminShell';
 import { formatDateId } from '@/lib/utils';
 import { isPlaceholder } from '@/data/defaults';
+import { SAMPLE_MARK } from '@/data/sample';
 
 /**
  * The dashboard home.
@@ -44,6 +45,24 @@ export default async function DashboardPage() {
   const drafts = news.filter((item) => !item.published).length;
 
   /**
+   * The collections with the `[CONTOH]` filler taken back out.
+   *
+   * This panel answers "what has the owner written?", so it must not count the
+   * sample rows standing in for their writing. Two of its items are counts
+   * rather than `isPlaceholder` checks — "Berita pertama" and "Foto galeri" —
+   * and once sample mode became the default those two reported as complete on a
+   * site with no real article and no real photograph.
+   *
+   * The profile fields never had the problem, because sample copy begins with
+   * `[` and `isPlaceholder` already reads that as unfinished. Titles are
+   * filtered here for exactly the same reason, using the same mark the reader
+   * sees. `tests/content.test.ts` guarantees every sample title carries it, so
+   * this filter cannot silently stop matching.
+   */
+  const ownNews = news.filter((item) => !item.title.startsWith(SAMPLE_MARK));
+  const ownGallery = gallery.filter((item) => !item.title.startsWith(SAMPLE_MARK));
+
+  /**
    * The fields that still hold placeholder copy.
    *
    * Checked against the same `isPlaceholder` helper the public site uses for its
@@ -57,8 +76,8 @@ export default async function DashboardPage() {
     { label: 'Alamat lengkap', done: !isPlaceholder(profile.address), href: '/admin/profil' },
     { label: 'Nomor telepon', done: !isPlaceholder(profile.phone), href: '/admin/profil' },
     { label: 'Alamat email', done: !isPlaceholder(profile.email), href: '/admin/profil' },
-    { label: 'Foto galeri', done: gallery.length > 6, href: '/admin/galeri' },
-    { label: 'Berita pertama', done: news.length > 0, href: '/admin/berita' },
+    { label: 'Foto galeri', done: ownGallery.length > 6, href: '/admin/galeri' },
+    { label: 'Berita pertama', done: ownNews.length > 0, href: '/admin/berita' },
     { label: 'Karya siswa', done: works.some((work) => !isPlaceholder(work.title)), href: '/admin/karya' },
   ];
 

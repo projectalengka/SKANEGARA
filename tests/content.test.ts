@@ -160,15 +160,24 @@ describe('cache tags agree between the read path and the write path', () => {
  * mark, the switch, and the two content rules the project is strictest about —
  * no invented events presented as real, and no student names.
  */
-describe('sample content is clearly labelled and off by default', () => {
-  it('does not serve sample data unless the switch is set', async () => {
+describe('sample content is clearly labelled, and on unless switched off', () => {
+  it('serves sample data when the switch is not set at all', async () => {
     const { sampleContent, sampleEnabled } = await import('../src/data/sample');
 
     const original = process.env.SAMPLE_DATA;
     delete process.env.SAMPLE_DATA;
     try {
-      assert.equal(sampleEnabled(), false, 'an unset SAMPLE_DATA must mean off, so a typo fails safe');
-      assert.equal(sampleContent(), null, 'the bundle must be null while the switch is off');
+      assert.equal(
+        sampleEnabled(),
+        true,
+        'an unset SAMPLE_DATA must serve sample content: the switch used to live in an ' +
+          'environment variable only the hosting account could set, and the deployed site was ' +
+          'measured serving 74 empty placeholders while the owner had done everything right',
+      );
+      const bundle = sampleContent();
+      assert.ok(bundle, 'the bundle must exist while the default applies');
+      assert.ok(bundle.news.length > 0, 'sample news must not be empty');
+      assert.ok(bundle.events.length > 0, 'sample events must not be empty');
     } finally {
       if (original === undefined) delete process.env.SAMPLE_DATA;
       else process.env.SAMPLE_DATA = original;
@@ -192,33 +201,16 @@ describe('sample content is clearly labelled and off by default', () => {
     }
   });
 
-  /**
-   * The audit's most expensive lesson, encoded so it cannot come back.
-   *
-   * The site was found serving the honest empty state while `.env` said
-   * `SAMPLE_DATA=on`. There was no bug in `sampleEnabled()` — the value simply
-   * was not in the process environment the server had been started with. From
-   * outside, "off" and "on but invisible to this process" produce byte-identical
-   * pages, so the failure was indistinguishable from the feature working.
-   *
-   * `sampleSwitch()` exists to break that tie. These assertions pin the
-   * contract: every value that is *not* explicitly recognised must report
-   * `recognised: false` **while still returning its raw text**, so the dashboard
-   * can name what it saw.
-   */
-  it('reports an unrecognised value verbatim instead of silently reading it as off', async () => {
-    const { sampleSwitch, sampleEnabled } = await import('../src/data/sample');
+  it('stops for the explicit off tokens — the only way to reach the empty state', async () => {
+    const { sampleContent, sampleEnabled, sampleSwitch } = await import('../src/data/sample');
 
     const original = process.env.SAMPLE_DATA;
-    // `On` with a capital O is the realistic typo: it reads as on to a human.
-    const typos = ['On', 'ON', 'ya', ' '];
     try {
-      for (const typo of typos) {
-        process.env.SAMPLE_DATA = typo;
-        const reading = sampleSwitch();
-        assert.equal(reading.raw, typo, `raw value must survive verbatim: ${JSON.stringify(typo)}`);
-        assert.equal(reading.recognised, false, `${JSON.stringify(typo)} must not switch sample data on`);
-        assert.equal(sampleEnabled(), false, `${JSON.stringify(typo)} must leave the site honest`);
+      for (const value of ['off', 'false', '0']) {
+        process.env.SAMPLE_DATA = value;
+        assert.equal(sampleSwitch().recognised, true, `${value} is a recognised value`);
+        assert.equal(sampleEnabled(), false, `${value} must switch sample data off`);
+        assert.equal(sampleContent(), null, `${value} must produce no bundle`);
       }
     } finally {
       if (original === undefined) delete process.env.SAMPLE_DATA;
@@ -226,24 +218,69 @@ describe('sample content is clearly labelled and off by default', () => {
     }
   });
 
-  it('recognises exactly on / true / 1 and nothing else', async () => {
+  /**
+   * The audit's most expensive lesson, encoded so it cannot come back.
+   *
+   * The site was found serving the honest empty state while `.env` said
+   * `SAMPLE_DATA=on`. There was no bug in `sampleEnabled()` — the value simply
+   * was not in the process environment the server had been started with. From
+   * outside, "off" and "on but invisible to this process" produced
+   * byte-identical pages, so the failure was indistinguishable from the feature
+   * working.
+   *
+   * `sampleSwitch()` exists to break that tie. These assertions pin the
+   * contract: a value the application does not understand must report
+   * `recognised: false` **while still returning its raw text**, so the dashboard
+   * can name what it saw. It falls back to the *default*, not to "off" — a
+   * silent fallback to empty is exactly what hid the original fault.
+   */
+  it('reports an unrecognised value verbatim, and falls back to the default rather than to empty', async () => {
+    const { sampleSwitch, sampleEnabled } = await import('../src/data/sample');
+
+    const original = process.env.SAMPLE_DATA;
+    // `On` with a capital O is the realistic typo: it reads as on to a human.
+    const typos = ['On', 'ON', 'ya', 'yes'];
+    try {
+      for (const typo of typos) {
+        process.env.SAMPLE_DATA = typo;
+        const reading = sampleSwitch();
+        assert.equal(reading.raw, typo, `raw value must survive verbatim: ${JSON.stringify(typo)}`);
+        assert.equal(reading.recognised, false, `${JSON.stringify(typo)} must report as unrecognised`);
+        assert.equal(reading.mode, 'on', `${JSON.stringify(typo)} must fall back to the default`);
+        assert.equal(sampleEnabled(), true, `${JSON.stringify(typo)} must leave the default in place`);
+      }
+    } finally {
+      if (original === undefined) delete process.env.SAMPLE_DATA;
+      else process.env.SAMPLE_DATA = original;
+    }
+  });
+
+  it('treats an unset or blank switch as the default, and recognises both token sets', async () => {
     const { sampleSwitch } = await import('../src/data/sample');
 
     const original = process.env.SAMPLE_DATA;
     try {
       for (const value of ['on', 'true', '1']) {
         process.env.SAMPLE_DATA = value;
-        assert.equal(sampleSwitch().recognised, true, `${value} must switch sample data on`);
+        assert.equal(sampleSwitch().mode, 'on', `${value} must switch sample data on`);
       }
 
-      for (const value of ['off', 'false', '0', 'no', 'On', 'TRUE', '']) {
+      for (const value of ['off', 'false', '0']) {
         process.env.SAMPLE_DATA = value;
-        assert.equal(sampleSwitch().recognised, false, `${JSON.stringify(value)} must not switch it on`);
+        assert.equal(sampleSwitch().mode, 'off', `${value} must switch sample data off`);
+      }
+
+      // Blank is what `.env.example` ships, so copying it must not read as a typo.
+      for (const value of ['', '   ']) {
+        process.env.SAMPLE_DATA = value;
+        const reading = sampleSwitch();
+        assert.equal(reading.mode, 'on', `${JSON.stringify(value)} must mean the default`);
+        assert.equal(reading.recognised, true, `${JSON.stringify(value)} is not a typo`);
       }
 
       delete process.env.SAMPLE_DATA;
       assert.equal(sampleSwitch().raw, undefined, 'an unset switch must report no raw value');
-      assert.equal(sampleSwitch().recognised, false, 'an unset switch must be off');
+      assert.equal(sampleSwitch().mode, 'on', 'an unset switch must use the default');
     } finally {
       if (original === undefined) delete process.env.SAMPLE_DATA;
       else process.env.SAMPLE_DATA = original;
@@ -271,6 +308,49 @@ describe('sample content is clearly labelled and off by default', () => {
 
     for (const item of sample.sampleGallery) {
       assert.ok(item.title.startsWith(SAMPLE_MARK), `gallery title unmarked: ${item.title}`);
+    }
+  });
+
+  /**
+   * The dashboard's "Perlu Dilengkapi" panel asks what the owner has written,
+   * and it decides that with `isPlaceholder`. Sample copy survives there only
+   * because every sample value begins with `[CONTOH]`, and `isPlaceholder`
+   * treats any leading `[` as unfinished — the same signal a seed placeholder
+   * carries.
+   *
+   * That was accidental, and it is load-bearing: without it, making sample mode
+   * the default would have the dashboard report an untouched profile as
+   * complete, and the owner would have no to-do list at all. So it is pinned
+   * here rather than left to luck.
+   */
+  it('keeps every sample profile and section value readable as unfinished', async () => {
+    const sample = await import('../src/data/sample');
+    const { isPlaceholder } = await import('../src/data/defaults');
+
+    const fields = Object.entries(sample.sampleProfileCopy) as [string, string | readonly string[]][];
+
+    for (const [field, value] of fields) {
+      const values = typeof value === 'string' ? [value] : value;
+      for (const entry of values) {
+        assert.equal(
+          isPlaceholder(entry),
+          true,
+          `sample profile field "${field}" must read as unfinished, got: ${entry}`,
+        );
+      }
+    }
+
+    for (const [key, body] of Object.entries(sample.sampleSectionBodies)) {
+      assert.equal(
+        isPlaceholder(body),
+        true,
+        `sample section body "${key}" must read as unfinished, got: ${body}`,
+      );
+    }
+
+    for (const [slug, copy] of Object.entries(sample.sampleProgramCopy)) {
+      assert.equal(isPlaceholder(copy.shortDescription), true, `program "${slug}" shortDescription`);
+      assert.equal(isPlaceholder(copy.description), true, `program "${slug}" description`);
     }
   });
 

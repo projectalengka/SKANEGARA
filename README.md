@@ -586,10 +586,17 @@ Aturannya, dan ini yang membuatnya aman dipakai di situs sekolah:
 
 1. **Setiap judul diawali `[CONTOH]`.** Pembaca tidak mungkin salah kira.
    Slug-nya juga diawali `contoh-`, jadi URL-nya pun mengumumkan diri sendiri.
-2. **Mati secara bawaan.** Hanya `SAMPLE_DATA=on` (atau `true` / `1`) yang
-   menyalakannya. Salah tulis dianggap mati.
+2. **Menyala secara bawaan.** Hanya `SAMPLE_DATA=off` (atau `false` / `0`) yang
+   mematikannya; apa pun selain itu — termasuk tidak diisi sama sekali —
+   berarti menyala. Bawaannya dulu mati, dan diubah 24 September 2026 karena
+   sakelar di variabel lingkungan hanya bisa diputar oleh pemilik akun hosting.
+   Terukur: `.env` pemilik berkata `on` sementara situs yang ter-deploy
+   menyajikan **74 placeholder kosong**, karena variabel itu tidak pernah dibuat
+   di Vercel. Sakelarnya ada di tempat yang salah bagi orang yang membutuhkannya.
 3. **Tidak menimpa tulisan Anda.** Data contoh hanya menggantikan konten yang
-   **masih placeholder** — lihat bagian di bawah.
+   **masih placeholder** — lihat bagian di bawah. Karena itu bawaannya menyala
+   tidak merugikan: begitu Anda menulis visi, sejarah, berita, atau keterangan
+   foto yang asli, teks `[CONTOH]` di slot itu hilang sendiri.
 4. **Tidak ada nama siswa** di karya contoh, sama seperti data awal. Mengarang
    nama orang lalu memasangnya di karya karangan adalah pelanggaran aturan
    konten yang paling jelas.
@@ -626,21 +633,19 @@ koleksi itu dibiarkan apa adanya.
 
 #### Cara memakai
 
-Menyalakan:
-
-```bash
-# .env
-SAMPLE_DATA=on
-```
-
-**Mulai ulang server** — nilai ini dibaca saat aplikasi menyala.
-
 Mematikan — kembali ke keadaan kosong yang sebenarnya:
 
 ```bash
 # .env
-SAMPLE_DATA=off     # atau hapus barisnya sama sekali
+SAMPLE_DATA=off
 ```
+
+**Mulai ulang server** — nilai ini dibaca saat aplikasi menyala, bukan saat
+build, jadi tidak perlu build ulang.
+
+Menyalakan lagi: hapus barisnya, atau isi dengan `on`. Salah tulis (`On`, `ya`)
+tetap dilaporkan sebagai tidak dikenali di sidebar dasbor, tetapi tidak lagi
+mengubah apa yang dilihat pengunjung — yang dipakai adalah bawaan.
 
 Menghapus fitur ini sepenuhnya: hapus `src/data/sample.ts`, lalu hapus pemanggilan
 `sampleInsteadOf` / `withSample*` / `isUneditedSeed` di `src/lib/content.ts`.

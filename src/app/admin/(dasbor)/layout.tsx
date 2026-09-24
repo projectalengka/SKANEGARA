@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { requireSession } from '@/lib/session';
-import { contentMode, getSchoolProfile, sampleMode, sampleRawValue } from '@/lib/content';
+import { contentMode, getSchoolProfile, sampleMode, sampleRawValue, sampleValueRecognised } from '@/lib/content';
 import { isMediaStorageConfigured } from '@/lib/media';
 import { AdminShell } from '@/components/admin/AdminShell';
 
@@ -39,6 +39,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       schoolName={profile.schoolName}
       sample={sampleMode()}
       sampleRaw={sampleRawValue()}
+      sampleRecognised={sampleValueRecognised()}
     >
       {children}
     </AdminShell>

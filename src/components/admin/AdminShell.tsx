@@ -25,6 +25,7 @@ export function AdminShell({
   schoolName,
   sample,
   sampleRaw,
+  sampleRecognised,
   children,
 }: {
   email: string;
@@ -62,9 +63,18 @@ export function AdminShell({
    * something unrecognised". During the audit those two states were
    * indistinguishable from the outside — `.env` said `on`, the site was empty,
    * and nothing explained why. Passing the raw string up means a typo is
-   * visible in the UI instead of being silently treated as off.
+   * visible in the UI instead of being silently swallowed.
    */
   sampleRaw?: string;
+  /**
+   * Whether that raw value is one the application understands.
+   *
+   * Separate from `sample` because the default is now on: an unrecognised value
+   * does not change what visitors see, so `sample` alone would leave the owner
+   * believing their edit took effect. This lets the sidebar say "that value is
+   * not recognised, the default is being used" instead.
+   */
+  sampleRecognised?: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -170,25 +180,36 @@ export function AdminShell({
             <div className="mt-3 border border-[var(--color-accent)] px-3 py-3">
               <p className="label text-[var(--color-accent-deep)]">Mode contoh aktif</p>
               <p className="mt-2 text-[length:var(--step--1)] text-[var(--color-text-muted)]">
-                Pengunjung melihat data bertanda <strong>[CONTOH]</strong>. Matikan dengan menghapus{' '}
-                <code>SAMPLE_DATA</code> dari berkas <code>.env</code>, lalu mulai ulang server.
+                Pengunjung melihat isian bertanda <strong>[CONTOH]</strong> pada bagian yang belum
+                Anda tulis. Isian itu hilang sendiri begitu Anda menyimpan tulisan asli, jadi tidak
+                ada yang perlu dibereskan setelahnya. Untuk mematikan seluruhnya, isi{' '}
+                <code>SAMPLE_DATA=off</code> lalu mulai ulang server.
               </p>
             </div>
-          ) : null}
+          ) : (
+            <div className="mt-3 border border-[var(--color-line)] px-3 py-3">
+              <p className="label text-[var(--color-text-muted)]">Data contoh dimatikan</p>
+              <p className="mt-2 text-[length:var(--step--1)] text-[var(--color-text-muted)]">
+                Bagian yang belum Anda tulis tampil kosong. Hapus baris <code>SAMPLE_DATA</code>,
+                atau isi dengan <code>on</code>, lalu mulai ulang server, untuk menampilkan isian
+                contoh kembali.
+              </p>
+            </div>
+          )}
 
           {/*
-            The other half of the switch: set, but not recognised by this
-            process. Without this branch the two states are indistinguishable
-            from a page — the site is simply empty either way — and the owner is
-            left guessing whether they typed it wrong or the server is stale.
+            A value this process does not understand. Now that the default is on,
+            this no longer changes what visitors see — but the owner still needs
+            to know that the value they typed is not the one in use, otherwise
+            their edit appears to have done nothing at all.
           */}
-          {!sample && sampleRaw !== undefined ? (
+          {sampleRecognised === false ? (
             <div className="mt-3 border border-[var(--color-line)] px-3 py-3">
               <p className="label text-[var(--color-text-muted)]">SAMPLE_DATA tidak dikenali</p>
               <p className="mt-2 text-[length:var(--step--1)] text-[var(--color-text-muted)]">
-                Nilainya terbaca <code>{JSON.stringify(sampleRaw)}</code>, jadi situs memakai
-                keadaan kosong. Yang dikenali hanya <code>on</code>, <code>true</code>, atau{' '}
-                <code>1</code>. Perbaiki nilainya, lalu mulai ulang server.
+                Nilainya terbaca <code>{JSON.stringify(sampleRaw)}</code>, jadi yang dipakai adalah
+                bawaan. Yang dikenali hanya <code>on</code>, <code>true</code>, <code>1</code>{' '}
+                (menyala) dan <code>off</code>, <code>false</code>, <code>0</code> (mati).
               </p>
             </div>
           ) : null}

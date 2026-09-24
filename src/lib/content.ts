@@ -597,10 +597,22 @@ export function sampleMode(): boolean {
  * The raw `SAMPLE_DATA` value as this process sees it, for the dashboard.
  *
  * Exists purely so a misconfigured switch is diagnosable. `sampleEnabled()`
- * collapses every non-`on` value to `false`, which is the correct behaviour but
+ * collapses the value to a single boolean, which is the correct behaviour but
  * throws away the distinction between "off" and "I typed `On`". The dashboard
  * shows the difference; nothing on the public site depends on it.
  */
 export function sampleRawValue(): string | undefined {
   return sampleSwitch().raw;
+}
+
+/**
+ * Whether the `SAMPLE_DATA` value this process saw is one it understands.
+ *
+ * Needed separately from `sampleMode()` now that the default is on: a typo no
+ * longer changes the outcome — the default applies either way — but the owner
+ * should still be told that the value they typed is not the one in use, rather
+ * than silently wondering why their edit had no effect.
+ */
+export function sampleValueRecognised(): boolean {
+  return sampleSwitch().recognised;
 }

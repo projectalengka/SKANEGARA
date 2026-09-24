@@ -15,19 +15,23 @@
  *   - Every title carries the literal prefix `[CONTOH]`. It is not decoration;
  *     it is the mechanism. A reader cannot mistake "`[CONTOH]` Kegiatan MPLS"
  *     for a factual claim, and a grep for `CONTOH` finds every single row.
- *   - The file is **dormant by default**. Nothing imports it unless
- *     `SAMPLE_DATA=on` is set (see `sampleEnabled()`), so a production deploy
- *     shows the honest empty states unless someone deliberately opts in.
+ *   - The file is **on by default**, because a site whose layouts have never
+ *     been seen cannot be reviewed, and because the switch used to live in an
+ *     environment variable that only whoever holds the hosting account can set.
+ *     Measured on 24 September 2026: the owner's own `.env` said `on` while the
+ *     deployed site still served 74 empty placeholders, because Vercel's copy of
+ *     the variable had never been created. The switch was in the wrong place for
+ *     the person who needed to flip it.
  *   - Deleting it is one file and one call site. There is no database row, no
  *     migration, no cache to purge.
  *
- * ## Turning it on
+ * ## Turning it off
  *
- *   SAMPLE_DATA=on        # in .env, then restart
+ *   SAMPLE_DATA=off       # in .env, then restart
  *
- * ## Turning it off again
- *
- *   SAMPLE_DATA=off       # or delete the line entirely
+ * Anything else — `on`, `true`, `1`, or no value at all — means on. And nothing
+ * here ever overrides the owner's own writing: see `sampleEnabled()` for why
+ * "on" is a safe default.
  *
  * The moment the owner publishes real content through the dashboard, the
  * database rows win over these — `prefer()` in `lib/content.ts` lets the
@@ -50,8 +54,23 @@ function marked(title: string): string {
   return title.startsWith(SAMPLE_MARK) ? title : `${SAMPLE_MARK} ${title}`;
 }
 
-/** The values that switch the sample dataset on. Anything else means off. */
-const SAMPLE_TRUTHY = ['on', 'true', '1'] as const;
+/** Values that switch the sample dataset on explicitly. */
+const SAMPLE_ON = ['on', 'true', '1'] as const;
+
+/** Values that switch it off. **This is the only way to reach the empty state.** */
+const SAMPLE_OFF = ['off', 'false', '0'] as const;
+
+/** The mode the site will actually run in, once the raw value has been read. */
+export type SampleMode = 'on' | 'off';
+
+export type SampleSwitchReading = {
+  /** The `SAMPLE_DATA` value this process saw, verbatim. `undefined` when unset. */
+  raw: string | undefined;
+  /** What the site will do. */
+  mode: SampleMode;
+  /** False only for a value this file does not understand (a typo). */
+  recognised: boolean;
+};
 
 /**
  * Read the switch together with *why* it holds its value.
@@ -63,16 +82,23 @@ const SAMPLE_TRUTHY = ['on', 'true', '1'] as const;
  * said `on`. Nothing in the UI could have told the owner that, because "off"
  * and "on but not in this process" look identical from a page.
  *
- * So the raw value is reported verbatim along with whether it was recognised.
- * A typo (`SAMPLE_DATA=On`, a stray quote, a trailing space) is then visibly
- * *unrecognised* rather than silently read as off.
+ * So the raw value is reported verbatim, alongside the mode actually used, so
+ * the dashboard can name what it saw.
  */
-export function sampleSwitch(): { raw: string | undefined; recognised: boolean } {
+export function sampleSwitch(): SampleSwitchReading {
   const raw = process.env.SAMPLE_DATA;
-  return {
-    raw,
-    recognised: SAMPLE_TRUTHY.some((value) => value === raw),
-  };
+  const value = raw?.trim() ?? '';
+
+  // Unset — and blank, which is what `.env.example` ships — means the default.
+  if (value === '') return { raw, mode: 'on', recognised: true };
+
+  if (SAMPLE_ON.some((token) => token === value)) return { raw, mode: 'on', recognised: true };
+  if (SAMPLE_OFF.some((token) => token === value)) return { raw, mode: 'off', recognised: true };
+
+  // A typo (`On`, a stray quote, a trailing space). Fall back to the default
+  // rather than guessing — but say so, because a silent fallback is precisely
+  // what made the original bug take an afternoon to find.
+  return { raw, mode: 'on', recognised: false };
 }
 
 /**
@@ -82,17 +108,27 @@ export function sampleSwitch(): { raw: string | undefined; recognised: boolean }
  * once and a build-time constant would be baked into the bundle — the switch
  * would then need a rebuild to flip, which defeats the point of a toggle.
  *
- * Default is **off**. An unset variable means "show the honest empty state".
- * Only an explicit `on`/`true`/`1` opts in, so a typo fails safe.
+ * ## Why the default is **on**
  *
- * Fails safe is not the same as fails *loudly*, though: this returns `false`
- * for both "switched off" and "switched on in a way this process cannot see".
- * The dashboard distinguishes the two using `sampleSwitch()` above — see
- * `AdminShell`, which points the owner at a server restart when the value is
- * set but unrecognised.
+ * It used to be off, on the reasoning that a deploy nobody configured should
+ * show the honest empty state. That reasoning was sound and is still what the
+ * `SAMPLE_DATA=off` escape hatch is for — but it made the default depend on an
+ * environment variable, and an environment variable is something only whoever
+ * holds the hosting account can set. Measured on 24 September 2026: the owner's
+ * own `.env` said `on` while the deployed site served 74 empty placeholders,
+ * because Vercel's copy of the variable had never been created. The switch was
+ * in the wrong place for the person who needed to flip it.
+ *
+ * Defaulting to on costs nothing that matters, because sample content never
+ * wins against real content: `sampleInsteadOf` only replaces collections still
+ * holding seed rows, and `withSampleProfile` / `withSampleSections` only fill
+ * fields still holding `placeholder()`. The moment the owner writes a real
+ * vision, history, article or caption, the `[CONTOH]` text disappears from that
+ * slot by itself. So "on" means "fill whatever is still empty", which is the
+ * honest reading of an unfinished site.
  */
 export function sampleEnabled(): boolean {
-  return sampleSwitch().recognised;
+  return sampleSwitch().mode === 'on';
 }
 
 // ---------------------------------------------------------------------------
