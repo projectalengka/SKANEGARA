@@ -580,7 +580,9 @@ Dasbor menampilkan daftar **Perlu Dilengkapi** di halaman Dasbor.
 
 Kadang tata letak perlu dinilai sebelum tulisan asli sekolah ada. Halaman berita
 yang kosong tidak bisa dinilai desainnya. Untuk itu ada `src/data/sample.ts`:
-satu berkas berisi data contoh untuk berita, kegiatan, galeri dan karya siswa.
+satu berkas berisi data contoh untuk berita, kegiatan, galeri, karya siswa —
+ditambah isian untuk profil sekolah (deskripsi, sejarah, visi, misi), badan tiap
+bagian halaman, dan deskripsi kedua program keahlian.
 
 Aturannya, dan ini yang membuatnya aman dipakai di situs sekolah:
 
@@ -602,6 +604,21 @@ Aturannya, dan ini yang membuatnya aman dipakai di situs sekolah:
    konten yang paling jelas.
 5. **Dasbor memberi tahu.** Saat mode contoh aktif, sidebar dasbor menampilkan
    peringatan supaya Anda tidak perlu menebak apa yang dilihat pengunjung.
+6. **Isinya prosa jadi, bukan instruksi kepada pemilik.** Ini bukan detail gaya.
+   Versi pertama data contoh berbunyi seperti catatan kerja: *"Visi sekolah dalam
+   satu kalimat yang mudah diingat"*, *"Deskripsi singkat karya. Jelaskan gagasan
+   di baliknya"*, *"Contoh keterangan kegiatan"*. Kalimat seperti itu jujur, tetapi
+   salah sasaran: situs yang isinya instruksi tetap terbaca sebagai template
+   kosong, karena yang dilihat pengunjung adalah kalimat yang meminta seseorang
+   mengisi sesuatu. Setiap nilai karena itu ditulis sebagai kalimat yang benar-benar
+   akan diterbitkan sebuah sekolah, dengan panjang yang sesuai slotnya — visi satu
+   kalimat, misi tiga butir, sejarah dua paragraf.
+7. **Yang tetap tidak dikarang: alamat lengkap, nomor telepon, dan alamat email.**
+   Ketiganya sengaja dibiarkan kosong dan tetap tampil sebagai placeholder. Nomor
+   telepon karangan bisa membuat orang benar-benar menelepon orang asing, dan itu
+   satu-satunya kerugian di sini yang tidak bisa diperbaiki dengan menghapus teks.
+   Sejarah pun memakai waktu yang kabur — *"awal tahun 1980-an"* — supaya tidak
+   mengarang tanggal yang bisa diperiksa orang dan ternyata salah.
 
 #### Kapan data contoh menggantikan, kapan tidak
 
