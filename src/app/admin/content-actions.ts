@@ -1,10 +1,20 @@
 'use server';
 
 import { revalidatePath, revalidateTag } from 'next/cache';
+import type { Prisma } from '@/generated/prisma/client';
 import { deleteImage, uploadImage } from '@/lib/media';
 import { getPrisma } from '@/lib/db';
 import { getSession } from '@/lib/session';
+import { isSampleId } from '@/lib/sample-id';
 import { slugify } from '@/lib/utils';
+import {
+  adoptableEventRows,
+  adoptableGalleryRows,
+  adoptableNewsRows,
+  adoptableWorkRows,
+  sampleEnabled,
+  type SampleCollection,
+} from '@/data/sample';
 import { mainTags } from './tags';
 
 /**
@@ -364,6 +374,9 @@ export async function saveNews(formData: FormData): Promise<ActionResult> {
       publishedAt,
     };
 
+    const refusal = sampleRowRefusal(id);
+    if (refusal) return refusal;
+
     if (id) {
       await prisma.news.update({ where: { id }, data });
     } else {
@@ -482,6 +495,9 @@ export async function saveGalleryItem(formData: FormData): Promise<ActionResult>
       published: readBool(formData, 'published'),
     };
 
+    const refusal = sampleRowRefusal(id);
+    if (refusal) return refusal;
+
     if (id) {
       await prisma.galleryItem.update({ where: { id }, data });
     } else {
@@ -553,6 +569,9 @@ export async function saveStudentWork(formData: FormData): Promise<ActionResult>
       order: readInt(formData, 'order') ?? 0,
       published: readBool(formData, 'published'),
     };
+
+    const refusal = sampleRowRefusal(id);
+    if (refusal) return refusal;
 
     if (id) {
       await prisma.studentWork.update({ where: { id }, data });
@@ -637,6 +656,9 @@ export async function saveEvent(formData: FormData): Promise<ActionResult> {
       published: readBool(formData, 'published'),
     };
 
+    const refusal = sampleRowRefusal(id);
+    if (refusal) return refusal;
+
     if (id) {
       await prisma.event.update({ where: { id }, data });
     } else {
@@ -718,8 +740,252 @@ export async function saveSection(formData: FormData): Promise<ActionResult> {
 }
 
 // ---------------------------------------------------------------------------
+// Adopting sample content
+// ---------------------------------------------------------------------------
+
+/**
+ * Turns the sample set into the owner's own rows, in one deliberate step.
+ *
+ * ## The defect this closes
+ *
+ * Sample content lives in `src/data/sample.ts` and never in Postgres, but the
+ * dashboard listed those rows as ordinary records — each with an id such as
+ * `sample-work-1` and an edit form. Saving one ran
+ * `update({ where: { id: 'sample-work-1' } })`, which Prisma rejects with
+ * `P2025` because no such primary key exists; the `catch` below turned that into
+ * *"Terjadi kesalahan. Silakan coba lagi."* Measured on 2026-09-24: the database
+ * held six student-work rows, every one a cuid, and `sample-work-1` was absent.
+ *
+ * The report was confusing because the image upload had already succeeded — the
+ * form said *"Gambar berhasil diunggah"* and only the save failed. The failure
+ * was never in the upload path.
+ *
+ * ## Why adoption rather than "just make save work"
+ *
+ * Creating a row on save would have been three lines, and it would have made the
+ * page worse: one real title anywhere makes the collection stop counting as
+ * untouched, so the sample set stands down — seventeen of the eighteen works
+ * would vanish and six placeholder-titled seed rows would surface in their place.
+ * Adopting the whole collection at once keeps every row, gives each one a real
+ * id, and removes the placeholder rows nobody had filled in.
+ *
+ * ## What it deletes, and why that is safe
+ *
+ * Only rows whose title still begins with `[` — the same test `isPlaceholder`
+ * uses. Those are seed rows that were never filled in, so they carry no writing
+ * of the owner's. Any uploaded media they point at is removed too, which matters
+ * because an orphaned asset still counts against the database quota that
+ * `/admin/pengaturan` reports.
+ */
+export async function adoptSampleContent(collection: SampleCollection): Promise<ActionResult> {
+  const check = await guard();
+  if (!check.ok) return check.result;
+
+  const prisma = getPrisma();
+  if (!prisma) return GENERIC_ERROR;
+
+  if (!sampleEnabled()) {
+    return {
+      ok: false,
+      message: 'Data contoh sedang tidak aktif, jadi tidak ada yang bisa dipakai.',
+    };
+  }
+
+  try {
+    switch (collection) {
+      case 'karya': {
+        const stale = await prisma.studentWork.findMany({
+          where: { title: { startsWith: '[' } },
+          select: { id: true, publicId: true },
+        });
+        const rows = adoptableWorkRows();
+
+        await inOneStep([
+          rows.length > 0 ? prisma.studentWork.createMany({ data: rows }) : null,
+          stale.length > 0
+            ? prisma.studentWork.deleteMany({ where: { id: { in: stale.map((row) => row.id) } } })
+            : null,
+        ]);
+        await dropOrphanedMedia(stale);
+
+        revalidateContent(mainTags.work);
+        return { ok: true, message: `${rows.length} karya contoh kini menjadi karya Anda dan bisa diedit.` };
+      }
+
+      case 'galeri': {
+        const stale = await prisma.galleryItem.findMany({
+          where: { title: { startsWith: '[' } },
+          select: { id: true, publicId: true },
+        });
+        const rows = adoptableGalleryRows();
+
+        await inOneStep([
+          rows.length > 0 ? prisma.galleryItem.createMany({ data: rows }) : null,
+          stale.length > 0
+            ? prisma.galleryItem.deleteMany({ where: { id: { in: stale.map((row) => row.id) } } })
+            : null,
+        ]);
+        await dropOrphanedMedia(stale);
+
+        revalidateContent(mainTags.gallery);
+        return { ok: true, message: `${rows.length} foto contoh kini menjadi foto Anda dan bisa diedit.` };
+      }
+
+      case 'berita': {
+        const stale = await prisma.news.findMany({
+          where: { title: { startsWith: '[' } },
+          select: { id: true, coverPublicId: true },
+        });
+
+        // Only slugs that survive are taken. Counting the placeholder rows would
+        // make adoption avoid a slug it is about to delete, producing needless
+        // `-2` suffixes on a fresh site.
+        const taken = new Set(
+          (
+            await prisma.news.findMany({
+              where: { NOT: { title: { startsWith: '[' } } },
+              select: { slug: true },
+            })
+          ).map((row) => row.slug),
+        );
+        const rows = adoptableNewsRows().map((row) => ({
+          ...row,
+          slug: uniqueSlug(row.slug, taken),
+        }));
+
+        await inOneStep([
+          rows.length > 0 ? prisma.news.createMany({ data: rows }) : null,
+          stale.length > 0
+            ? prisma.news.deleteMany({ where: { id: { in: stale.map((row) => row.id) } } })
+            : null,
+        ]);
+        await dropOrphanedMedia(stale, 'coverPublicId');
+
+        revalidateContent(mainTags.news);
+        return { ok: true, message: `${rows.length} berita contoh kini menjadi berita Anda dan bisa diedit.` };
+      }
+
+      case 'kegiatan': {
+        const stale = await prisma.event.findMany({
+          where: { title: { startsWith: '[' } },
+          select: { id: true, publicId: true },
+        });
+
+        const taken = new Set(
+          (
+            await prisma.event.findMany({
+              where: { NOT: { title: { startsWith: '[' } } },
+              select: { slug: true },
+            })
+          ).map((row) => row.slug),
+        );
+        const rows = adoptableEventRows().map((row) => ({
+          ...row,
+          slug: uniqueSlug(row.slug, taken),
+        }));
+
+        await inOneStep([
+          rows.length > 0 ? prisma.event.createMany({ data: rows }) : null,
+          stale.length > 0
+            ? prisma.event.deleteMany({ where: { id: { in: stale.map((row) => row.id) } } })
+            : null,
+        ]);
+        await dropOrphanedMedia(stale);
+
+        revalidateContent(mainTags.events);
+        return { ok: true, message: `${rows.length} kegiatan contoh kini menjadi kegiatan Anda dan bisa diedit.` };
+      }
+
+      default:
+        return { ok: false, message: 'Jenis konten tidak dikenal.' };
+    }
+  } catch (error) {
+    console.error('[admin] Gagal memakai data contoh.', error);
+    return GENERIC_ERROR;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * Runs the given Prisma operations as one transaction, skipping when there is
+ * nothing to do.
+ *
+ * One transaction rather than two sequential writes, because adoption both adds
+ * the sample rows and removes the placeholder ones: a half-applied run would
+ * leave the owner with duplicates or, worse, with neither. `$transaction([])` is
+ * not a no-op — it is an error — hence the guard, which also covers the honest
+ * case of a collection that has nothing left to change.
+ */
+async function inOneStep(
+  operations: (Prisma.PrismaPromise<unknown> | null)[],
+): Promise<void> {
+  const pending = operations.filter(
+    (operation): operation is Prisma.PrismaPromise<unknown> => operation !== null,
+  );
+
+  const client = getPrisma();
+  if (!client || pending.length === 0) return;
+
+  await client.$transaction(pending);
+}
+
+/** Removes the stored bytes behind rows that are about to be deleted. */
+async function dropOrphanedMedia(
+  rows: { publicId?: string; coverPublicId?: string }[],
+  field: 'publicId' | 'coverPublicId' = 'publicId',
+): Promise<void> {
+  for (const row of rows) {
+    const id = row[field];
+    if (id) await deleteImage(id);
+  }
+}
+
+/**
+ * Makes `base` unique against the slugs already in use, appending `-2`, `-3` …
+ *
+ * The sample slugs are ordinary words — `jadwal-penerimaan`, `pameran-bazar` —
+ * so an owner who has already written an article with the same slug would
+ * otherwise hit the unique constraint and see the generic error, which is the
+ * exact failure mode adoption exists to remove. `taken` is mutated as slugs are
+ * handed out, so a single batch cannot collide with itself.
+ */
+function uniqueSlug(base: string, taken: Set<string>): string {
+  if (!taken.has(base)) {
+    taken.add(base);
+    return base;
+  }
+
+  let suffix = 2;
+  while (taken.has(`${base}-${suffix}`)) suffix += 1;
+
+  const slug = `${base}-${suffix}`;
+  taken.add(slug);
+  return slug;
+}
+
+/**
+ * Refuses to write over a sample row, with a message the owner can act on.
+ *
+ * The list pages no longer offer an edit form for sample rows, so this is the
+ * second line of defence rather than the first. It exists because the first
+ * version of this bug was reachable from more than one place — including a URL
+ * typed by hand — and because a `catch` that maps every failure to *"Terjadi
+ * kesalahan. Silakan coba lagi."* is exactly what made the original report so
+ * hard to diagnose. A refusal that names the cause costs one branch.
+ */
+function sampleRowRefusal(id: string): ActionResult | null {
+  if (!isSampleId(id)) return null;
+
+  return {
+    ok: false,
+    message:
+      'Ini data contoh, bukan data yang tersimpan di basis data, jadi belum bisa diubah. ' +
+      'Buka halaman daftarnya dan pakai tombol "Pakai sebagai data saya" lebih dahulu.',
+  };
+}
 
 /**
  * Recognises a Postgres unique-constraint violation.

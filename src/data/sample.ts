@@ -45,6 +45,7 @@ import type {
   NewsContent,
   WorkContent,
 } from './defaults';
+import { SAMPLE_ID_PREFIX } from '@/lib/sample-id';
 
 /** The one string that makes sample content recognisable at a glance. */
 export const SAMPLE_MARK = '[CONTOH]';
@@ -52,6 +53,36 @@ export const SAMPLE_MARK = '[CONTOH]';
 /** Prefixes a title with the sample mark, unless it already carries one. */
 function marked(title: string): string {
   return title.startsWith(SAMPLE_MARK) ? title : `${SAMPLE_MARK} ${title}`;
+}
+
+/**
+ * Removes every sample mark from a value.
+ *
+ * Used when the owner adopts the sample set as their own content. The mark is
+ * what makes sample copy honest, so it has to go at exactly the moment the copy
+ * stops being a sample — and it appears **more than once** in some values: every
+ * paragraph of a news body and of the school history carries its own, because a
+ * reader can land mid-article. A `startsWith` slice would leave the rest behind.
+ *
+ * The mark is always written as `[CONTOH] ` with a trailing space, so that is
+ * removed first; the bare form is then swept up in case a value ends with it.
+ */
+export function unmark(value: string): string {
+  return value.split(`${SAMPLE_MARK} `).join('').split(SAMPLE_MARK).join('').trim();
+}
+
+/** The slug prefix that makes a sample URL announce itself. */
+export const SAMPLE_SLUG_PREFIX = 'contoh-';
+
+/**
+ * Removes the self-announcing slug prefix, for the same reason as `unmark`.
+ *
+ * A real article at `/berita/contoh-jadwal-penerimaan` would be a lie of a
+ * different kind: the URL would keep claiming the page is an example after the
+ * owner has made it their own.
+ */
+export function unmarkSlug(slug: string): string {
+  return slug.startsWith(SAMPLE_SLUG_PREFIX) ? slug.slice(SAMPLE_SLUG_PREFIX.length) : slug;
 }
 
 /** Values that switch the sample dataset on explicitly. */
@@ -313,7 +344,7 @@ export const sampleProgramCopy: Record<
  */
 export const sampleNews: NewsContent[] = [
   {
-    id: 'sample-news-1',
+    id: `${SAMPLE_ID_PREFIX}news-1`,
     title: marked('Upacara Bendera dan Pengumuman Jadwal Sekolah'),
     slug: 'contoh-upacara-bendera',
     category: 'Pengumuman',
@@ -336,7 +367,7 @@ export const sampleNews: NewsContent[] = [
     createdAt: '2026-08-04T01:00:00.000Z',
   },
   {
-    id: 'sample-news-2',
+    id: `${SAMPLE_ID_PREFIX}news-2`,
     title: marked('Kegiatan Praktik di Workshop Program Keahlian'),
     slug: 'contoh-praktik-workshop',
     category: 'Kegiatan',
@@ -360,7 +391,7 @@ export const sampleNews: NewsContent[] = [
     createdAt: '2026-08-18T01:00:00.000Z',
   },
   {
-    id: 'sample-news-3',
+    id: `${SAMPLE_ID_PREFIX}news-3`,
     title: marked('Informasi Jadwal Penerimaan Siswa Baru'),
     slug: 'contoh-jadwal-penerimaan',
     category: 'PPDB',
@@ -385,7 +416,7 @@ export const sampleNews: NewsContent[] = [
     createdAt: '2026-09-01T01:00:00.000Z',
   },
   {
-    id: 'sample-news-4',
+    id: `${SAMPLE_ID_PREFIX}news-4`,
     title: marked('Pameran Karya Siswa Akhir Semester'),
     slug: 'contoh-pameran-karya',
     category: 'Kegiatan',
@@ -432,7 +463,7 @@ export const sampleNews: NewsContent[] = [
  */
 export const sampleEvents: EventContent[] = [
   {
-    id: 'sample-event-1',
+    id: `${SAMPLE_ID_PREFIX}event-1`,
     title: marked('Kegiatan Belajar Bersama Antar Kelas'),
     slug: 'contoh-belajar-bersama',
     description:
@@ -447,7 +478,7 @@ export const sampleEvents: EventContent[] = [
     published: true,
   },
   {
-    id: 'sample-event-2',
+    id: `${SAMPLE_ID_PREFIX}event-2`,
     title: marked('Workshop Singkat Program Keahlian'),
     slug: 'contoh-workshop-program',
     description:
@@ -462,7 +493,7 @@ export const sampleEvents: EventContent[] = [
     published: true,
   },
   {
-    id: 'sample-event-3',
+    id: `${SAMPLE_ID_PREFIX}event-3`,
     title: marked('Pameran dan Bazar Sekolah'),
     slug: 'contoh-pameran-bazar',
     description:
@@ -478,7 +509,7 @@ export const sampleEvents: EventContent[] = [
     published: true,
   },
   {
-    id: 'sample-event-4',
+    id: `${SAMPLE_ID_PREFIX}event-4`,
     title: marked('Pertemuan Orang Tua dan Wali Siswa'),
     slug: 'contoh-pertemuan-orang-tua',
     description:
@@ -561,7 +592,7 @@ export const sampleStudentWork: WorkContent[] = workCategoryNames.flatMap((categ
     const angle = workSlotAngles[slot] ?? workSlotAngles[0];
 
     return {
-      id: `sample-work-${index + 1}`,
+      id: `${SAMPLE_ID_PREFIX}work-${index + 1}`,
       // Numbered inside the category, so the grid reads as a small collection
       // rather than the same caption repeated three times.
       title: marked(`Karya ${category} ${slot + 1}`),
@@ -633,7 +664,7 @@ const gallerySampleCaptions = [
 ];
 
 export const sampleGallery: GalleryContent[] = gallerySampleTitles.map((title, index) => ({
-  id: `sample-gal-${index + 1}`,
+  id: `${SAMPLE_ID_PREFIX}gal-${index + 1}`,
   // Captions keep the category wording but carry the sample mark, so they are
   // never read as a record of a specific photographed event.
   title: marked(title),
@@ -678,4 +709,164 @@ export function sampleContent(): SampleContent | null {
     gallery: sampleGallery,
     studentWork: sampleStudentWork,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Adoption — turning the sample set into the owner's own content
+// ---------------------------------------------------------------------------
+//
+// ## The bug these rows close
+//
+// Sample content lives in this file, never in Postgres. The dashboard, however,
+// listed those rows as if they were ordinary records — each with an id like
+// `sample-work-1` and an edit form. Saving one asked Prisma to update a primary
+// key that does not exist, which throws `P2025`, which the action's `catch`
+// turned into "Terjadi kesalahan. Silakan coba lagi." Measured before the fix:
+// the database held six student-work rows, all cuid ids, and `sample-work-1` was
+// simply absent. The image upload had already succeeded, which is what made the
+// report confusing — the failure was never in the upload.
+//
+// ## What adoption does instead
+//
+// The owner presses one button and the sample set becomes real rows: marks
+// stripped, slugs de-prefixed, new cuid ids assigned by the database. From then
+// on every row is editable, deletable and — the point of the exercise — able to
+// receive an uploaded photograph.
+//
+// Nothing here writes to the database. These functions only build the rows; the
+// server action in `src/app/admin/content-actions.ts` does the writing, so the
+// mapping stays pure and testable.
+
+/** Which sample-backed collection to adopt. */
+export type SampleCollection = 'karya' | 'galeri' | 'berita' | 'kegiatan';
+
+/** A student work, shaped for `prisma.studentWork.createMany`. */
+export type WorkAdoptionRow = {
+  title: string;
+  studentName: string;
+  category: string;
+  description: string;
+  image: string;
+  publicId: string;
+  year: number | null;
+  order: number;
+  published: boolean;
+};
+
+/** A gallery photo, shaped for `prisma.galleryItem.createMany`. */
+export type GalleryAdoptionRow = {
+  title: string;
+  image: string;
+  publicId: string;
+  category: string;
+  description: string;
+  order: number;
+  published: boolean;
+};
+
+/** A news article, shaped for `prisma.news.createMany`. */
+export type NewsAdoptionRow = {
+  title: string;
+  slug: string;
+  category: string;
+  excerpt: string;
+  content: string;
+  coverImage: string;
+  coverPublicId: string;
+  published: boolean;
+  publishedAt: Date | null;
+  createdAt: Date;
+};
+
+/** An event, shaped for `prisma.event.createMany`. */
+export type EventAdoptionRow = {
+  title: string;
+  slug: string;
+  description: string;
+  image: string;
+  publicId: string;
+  date: Date;
+  endDate: Date | null;
+  location: string;
+  published: boolean;
+};
+
+/** Reads an ISO string from the sample set as a `Date`, or `null`. */
+function asDate(value: string | null | undefined): Date | null {
+  return value ? new Date(value) : null;
+}
+
+/**
+ * The student works as database rows, with the sample mark removed.
+ *
+ * `publicId` stays empty on purpose: the sample images are drawn placeholders
+ * shipped in `public/`, not uploaded assets, so there is nothing in the media
+ * table to point at. `deleteStudentWork` only calls `deleteImage` for a non-empty
+ * `publicId`, so an adopted row that the owner later deletes simply removes the
+ * row — no orphaned asset, no attempt to delete a file that never existed.
+ */
+export function adoptableWorkRows(): WorkAdoptionRow[] {
+  return sampleStudentWork.map((work, index) => ({
+    title: unmark(work.title),
+    studentName: work.studentName,
+    category: work.category,
+    description: unmark(work.description),
+    image: work.image,
+    publicId: '',
+    year: work.year,
+    order: index + 1,
+    published: work.published,
+  }));
+}
+
+/** The gallery photos as database rows, with the sample mark removed. */
+export function adoptableGalleryRows(): GalleryAdoptionRow[] {
+  return sampleGallery.map((item, index) => ({
+    title: unmark(item.title),
+    image: item.image,
+    publicId: '',
+    category: item.category,
+    description: unmark(item.description),
+    order: index + 1,
+    published: item.published,
+  }));
+}
+
+/**
+ * The news articles as database rows, with the mark removed from every field a
+ * reader sees — title, excerpt, and each paragraph of the body.
+ *
+ * `publishedAt` and `createdAt` keep the sample dates. They are what gives the
+ * archive page more than one month group, and they are the one place where an
+ * invented value is harmless: the article is the owner's own content by the time
+ * it is written, and the date is theirs to correct in the form.
+ */
+export function adoptableNewsRows(): NewsAdoptionRow[] {
+  return sampleNews.map((article) => ({
+    title: unmark(article.title),
+    slug: unmarkSlug(article.slug),
+    category: article.category,
+    excerpt: unmark(article.excerpt),
+    content: unmark(article.content),
+    coverImage: article.coverImage,
+    coverPublicId: '',
+    published: article.published,
+    publishedAt: asDate(article.publishedAt),
+    createdAt: asDate(article.createdAt) ?? new Date(),
+  }));
+}
+
+/** The events as database rows, with the sample mark removed. */
+export function adoptableEventRows(): EventAdoptionRow[] {
+  return sampleEvents.map((event) => ({
+    title: unmark(event.title),
+    slug: unmarkSlug(event.slug),
+    description: unmark(event.description),
+    image: event.image,
+    publicId: '',
+    date: asDate(event.date) ?? new Date(),
+    endDate: asDate(event.endDate),
+    location: unmark(event.location),
+    published: event.published,
+  }));
 }

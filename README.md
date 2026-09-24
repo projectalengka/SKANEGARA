@@ -619,6 +619,13 @@ Aturannya, dan ini yang membuatnya aman dipakai di situs sekolah:
    satu-satunya kerugian di sini yang tidak bisa diperbaiki dengan menghapus teks.
    Sejarah pun memakai waktu yang kabur — *"awal tahun 1980-an"* — supaya tidak
    mengarang tanggal yang bisa diperiksa orang dan ternyata salah.
+8. **Baris contoh tidak bisa diedit — tetapi bisa diadopsi.** Barisnya tidak punya
+   primary key di basis data, jadi menawarkan tombol Edit untuknya berarti
+   menawarkan aksi yang pasti gagal. Dasbor karena itu menandainya dengan lencana
+   `Contoh` dan menyediakan satu tombol, **Pakai sebagai data saya**, yang menyalin
+   seluruh koleksi ke basis data dengan id baru dan membuang baris placeholder yang
+   belum diisi. Setelah itu semuanya bisa diedit seperti konten biasa. Lihat
+   *"Baris contoh yang tidak punya barisnya"* di bagian verifikasi.
 
 #### Kapan data contoh menggantikan, kapan tidak
 
@@ -1133,6 +1140,81 @@ TAG=sesudah node outputs/probe-lines-viewport.mjs
 Gerbang regresinya ada di `tests/motion.test.ts` (`the closed mobile menu paints
 nothing`) dan sudah dibuktikan **gagal** saat bug-nya dikembalikan, lalu lulus
 saat diperbaiki.
+
+### Baris contoh yang tidak punya barisnya
+
+Keluhan pemilik (24 September 2026): *"ada kesalahan saat upload gambar karya
+siswa"*, dengan tangkapan layar yang memperlihatkan **"Gambar berhasil diunggah"**
+di kolom gambarnya dan **"Terjadi kesalahan. Silakan coba lagi."** di atasnya.
+
+Unggahannya memang berhasil. Yang gagal adalah menyimpannya, dan sebabnya bukan
+di jalur unggah sama sekali:
+
+| Fakta | Nilai terukur |
+| --- | --- |
+| Baris `studentWork` di basis data | **6**, semuanya id `cuid` |
+| `sample-work-1` di basis data | **tidak ada** |
+| Yang dijalankan `saveStudentWork` | `update({ where: { id: 'sample-work-1' } })` |
+| Yang dilempar Prisma | `P2025` — record to update not found |
+| Yang dilihat pemilik | pesan generik dari `catch` |
+
+Baris contoh tinggal di `src/data/sample.ts` dan tidak pernah masuk Postgres,
+tetapi dasbor menampilkannya sebagai baris biasa dengan tombol Edit. Jadi
+tangkapan layar itu bukan bug unggah, melainkan **aksi yang ditawarkan untuk baris
+yang tidak ada**.
+
+Perbaikannya bukan membuat tombol Simpan berbohong, melainkan berhenti
+menawarkan aksi yang tidak bisa berhasil, lalu menyediakan satu tombol yang
+benar-benar bekerja:
+
+| Perubahan | Berkas |
+| --- | --- |
+| Satu definisi awalan id contoh, tanpa data di dalamnya | `src/lib/sample-id.ts` |
+| Panel "Pakai sebagai data saya" + lencana `Contoh` pada barisnya | `src/components/admin/SampleContentPanel.tsx` |
+| Aksi adopsi: menulis baris contoh ke basis data, membuang baris placeholder | `src/app/admin/content-actions.ts` |
+| Empat pengelola berhenti menawarkan Edit untuk baris contoh | `src/components/admin/managers/*.tsx` |
+| Baris belum diisi tidak lagi tampil ke publik | `src/lib/content.ts` (`withoutUnfinished`) |
+
+Dua probe menjaganya, dan keduanya menerima `BASE`:
+
+```bash
+npx tsx outputs/probe-adopsi-contoh.ts                 # jalur adopsi, digulung balik
+node --env-file=.env outputs/probe-adopsi-dasbor.mjs   # apa yang benar-benar dirender
+```
+
+`probe-adopsi-contoh.ts` menjalankan seluruh pekerjaan adopsi di dalam satu
+transaksi yang **sengaja digagalkan** di akhir, jadi ia membuktikan jalur
+sungguhannya tanpa mengubah satu baris pun. Keluarannya pada basis data ini:
+
+```
+sebelum        — baris karya di basis data: 6
+di transaksi    — baris karya: 18 (6 baris placeholder dibuang)
+  18 baris contoh ditulis, judul pertama: "Karya Poster 1"
+  masih ada penanda [CONTOH]? false
+  masih ada id berawalan sample-? false
+  simpan pada cmufjsljx0000kcf267wt0uz7 berhasil → "Karya Poster 1 — gambar baru"
+sesudah        — baris karya di basis data: 6
+ringkasan: JALUR ADOPSI TERBUKTI, basis data tidak berubah
+```
+
+`probe-adopsi-dasbor.mjs` masuk ke dasbor dan menghitung apa yang dirender:
+lencana `Contoh`, tombol Edit, dan keberadaan panelnya.
+
+| Halaman | Baris contoh | Panel | Tombol Edit | Tombol Hapus |
+| --- | --- | --- | --- | --- |
+| Karya Siswa | 18 | ada | **0** | **0** |
+| Berita | 4 | ada | **0** | **0** |
+| Kegiatan | 4 | ada | **0** | **0** |
+| Galeri | 0 | **tidak ada** | 6 | 6 |
+
+Galeri sengaja berbeda, dan itu bukan kelalaian: keterangan galeri di seed sudah
+tulisan jadi (`"Kegiatan Belajar"`), bukan placeholder, sehingga koleksinya tidak
+pernah dianggap belum disentuh dan data contoh tidak menggantikannya — lihat
+catatan panjang di `getGallery`. Barisnya nyata, jadi Edit dan Hapus memang harus
+ada. Halaman itulah yang membuktikan penjaganya harus tinggal **di dalam**
+komponen panel, bukan di empat pemanggil yang masing-masing harus ingat:
+versi pertamanya mengembalikan panel tanpa syarat, dan `/admin/galeri`
+menampilkan *"0 foto contoh ini menjadi milik Anda"*. Terukur, bukan dugaan.
 
 ### Memverifikasi produksi, bukan hanya localhost
 

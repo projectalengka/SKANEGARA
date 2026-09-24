@@ -136,6 +136,33 @@ function isPlaceholderText(value: string | null | undefined): boolean {
   return value.startsWith('[') || value.trim().length === 0;
 }
 
+/**
+ * Drops rows nobody has written yet, for a *public* read.
+ *
+ * ## The case this exists for
+ *
+ * `npm run db:seed` writes six student works whose titles read `[Judul karya
+ * Poster — isi melalui Dasbor Admin]`. While every title is still a placeholder
+ * the collection counts as untouched and the sample set stands in, so those six
+ * rows are never seen. But the moment the owner publishes **one** real work, the
+ * collection stops counting as untouched and the winning rows are shown as they
+ * are — six placeholder cards and one real one, side by side on the public page.
+ * Measured on the built site before this filter existed.
+ *
+ * So: a row whose title is still a placeholder is not finished work, and
+ * finished work is what a public page shows. The dashboard is deliberately
+ * exempt — see every call site, which passes `includeUnpublished` — because
+ * there those rows are the owner's to-do list, and hiding them would hide the
+ * work left to do.
+ *
+ * The test is on the title only, and deliberately not on `published`: a row can
+ * be marked published and still have no title, and that is the state this
+ * catches. Nothing here is destructive — the rows stay in the database.
+ */
+function withoutUnfinished<T extends { title: string }>(rows: T[]): T[] {
+  return rows.filter((row) => !isPlaceholderText(row.title));
+}
+
 /** Applies the sample profile copy to whichever profile fields are unfilled. */
 function withSampleProfile(profile: SchoolProfileContent): SchoolProfileContent {
   if (!sampleEnabled()) return profile;
@@ -307,7 +334,7 @@ export async function getNews(
       // database winning is a real article, decided in one place.
       if (rows.length === 0) return fallback;
 
-      return rows.map<NewsContent>((row) => ({
+      const mapped = rows.map<NewsContent>((row) => ({
         id: row.id,
         title: row.title,
         slug: row.slug,
@@ -320,6 +347,10 @@ export async function getNews(
         publishedAt: toIso(row.publishedAt),
         createdAt: toIso(row.createdAt) ?? new Date().toISOString(),
       }));
+
+      // Public reads drop articles nobody has written yet; the dashboard keeps
+      // them, because that list is the owner's to-do list.
+      return options.includeUnpublished ? mapped : withoutUnfinished(mapped);
     },
     fallback,
   );
@@ -394,7 +425,7 @@ export async function getGallery(
       });
       if (rows.length === 0) return sampleRows.length > 0 ? sampleRows : fallback;
 
-      return rows.map<GalleryContent>((row) => ({
+      const mapped = rows.map<GalleryContent>((row) => ({
         id: row.id,
         title: row.title,
         image: row.image,
@@ -404,6 +435,8 @@ export async function getGallery(
         order: row.order,
         published: row.published,
       }));
+
+      return options.includeUnpublished ? mapped : withoutUnfinished(mapped);
     },
     sampleRows.length > 0 ? sampleRows : fallback,
   );
@@ -467,7 +500,21 @@ export async function getStudentWork(
         published: row.published,
       }));
 
-      return isUneditedSeed(mapped.map((item) => item.title)) && sampleRows.length > 0 ? sampleRows : mapped;
+      // Still entirely untouched: the sample set stands in, so the grid can be
+      // judged against eighteen works rather than six placeholders.
+      if (isUneditedSeed(mapped.map((item) => item.title)) && sampleRows.length > 0) {
+        return sampleRows;
+      }
+
+      /**
+       * Mixed: the owner has written at least one work, so the collection is
+       * theirs and the sample set stands down. The six seed rows they never
+       * filled in must stand down too — otherwise the first real work published
+       * to a fresh site drags six cards reading `[Judul karya Poster — isi
+       * melalui Dasbor Admin]` onto the public page. They stay visible in the
+       * dashboard, where they are a to-do list rather than an embarrassment.
+       */
+      return options.includeUnpublished ? mapped : withoutUnfinished(mapped);
     },
     isUneditedSeed(seed.map((item) => item.title)) && sampleRows.length > 0 ? sampleRows : seed,
   );
@@ -504,7 +551,7 @@ export async function getEvents(
       });
       if (rows.length === 0) return fallback;
 
-      return rows.map<EventContent>((row) => ({
+      const mapped = rows.map<EventContent>((row) => ({
         id: row.id,
         title: row.title,
         slug: row.slug,
@@ -516,6 +563,8 @@ export async function getEvents(
         location: row.location,
         published: row.published,
       }));
+
+      return options.includeUnpublished ? mapped : withoutUnfinished(mapped);
     },
     fallback,
   );

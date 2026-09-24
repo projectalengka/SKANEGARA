@@ -20,6 +20,8 @@ import {
   uploadContentImage,
   type ActionResult,
 } from '@/app/admin/content-actions';
+import { isSampleId } from '@/lib/sample-id';
+import { SampleContentPanel, SampleRowBadge } from '@/components/admin/SampleContentPanel';
 import type { GalleryContent } from '@/data/defaults';
 
 /**
@@ -45,6 +47,8 @@ export function GalleryManager({ items }: { items: GalleryContent[] }) {
 
   const upload = (formData: FormData) => uploadContentImage(formData, 'galeri');
 
+  const sampleCount = items.filter((item) => isSampleId(item.id)).length;
+
   const onDelete = (id: string) => async (): Promise<ActionResult> => {
     const result = await deleteGalleryItem(id);
     if (result.ok) router.refresh();
@@ -54,6 +58,8 @@ export function GalleryManager({ items }: { items: GalleryContent[] }) {
   return (
     <>
       <ActionNotice notice={notice} onDismiss={clear} />
+
+      <SampleContentPanel collection="galeri" count={sampleCount} />
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <button
@@ -108,6 +114,7 @@ export function GalleryManager({ items }: { items: GalleryContent[] }) {
           <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {items.map((item) => {
               const isOpen = openId === item.id;
+              const isSample = isSampleId(item.id);
 
               return (
                 <li key={item.id} className="border border-[var(--color-line)] bg-[var(--color-paper)]">
@@ -128,19 +135,25 @@ export function GalleryManager({ items }: { items: GalleryContent[] }) {
                     <p className="label mt-1.5 text-[var(--color-text-faint)]">{item.category}</p>
 
                     <div className="mt-4 flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setOpenId(isOpen ? null : item.id)}
-                        aria-expanded={isOpen}
-                        className="label border border-[var(--color-line)] px-3 py-2 transition-colors duration-300 hover:border-[var(--color-ink)]"
-                      >
-                        {isOpen ? 'Tutup' : 'Edit'}
-                      </button>
-                      <DeleteButton action={onDelete(item.id)} onDone={handle} />
+                      {isSample ? (
+                        <SampleRowBadge />
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setOpenId(isOpen ? null : item.id)}
+                            aria-expanded={isOpen}
+                            className="label border border-[var(--color-line)] px-3 py-2 transition-colors duration-300 hover:border-[var(--color-ink)]"
+                          >
+                            {isOpen ? 'Tutup' : 'Edit'}
+                          </button>
+                          <DeleteButton action={onDelete(item.id)} onDone={handle} />
+                        </>
+                      )}
                     </div>
                   </div>
 
-                  {isOpen ? (
+                  {isOpen && !isSample ? (
                     <div className="border-t border-[var(--color-line)] px-4 py-5">
                       <ActionForm
                         action={saveGalleryItem}

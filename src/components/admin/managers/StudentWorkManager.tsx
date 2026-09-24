@@ -20,6 +20,8 @@ import {
   uploadContentImage,
   type ActionResult,
 } from '@/app/admin/content-actions';
+import { isSampleId } from '@/lib/sample-id';
+import { SampleContentPanel, SampleRowBadge } from '@/components/admin/SampleContentPanel';
 import type { WorkContent } from '@/data/defaults';
 
 /**
@@ -51,6 +53,11 @@ export function StudentWorkManager({ works }: { works: WorkContent[] }) {
 
   const upload = (formData: FormData) => uploadContentImage(formData, 'karya');
 
+  // Rows that live in `src/data/sample.ts` rather than in the database. They are
+  // listed so the owner can see what the grid will look like, but they carry no
+  // primary key to update — see `SampleContentPanel`.
+  const sampleCount = works.filter((work) => isSampleId(work.id)).length;
+
   const onDelete = (id: string) => async (): Promise<ActionResult> => {
     const result = await deleteStudentWork(id);
     if (result.ok) router.refresh();
@@ -60,6 +67,8 @@ export function StudentWorkManager({ works }: { works: WorkContent[] }) {
   return (
     <>
       <ActionNotice notice={notice} onDismiss={clear} />
+
+      <SampleContentPanel collection="karya" count={sampleCount} />
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <button
@@ -107,6 +116,7 @@ export function StudentWorkManager({ works }: { works: WorkContent[] }) {
         <ul className="flex flex-col gap-4">
           {works.map((work) => {
             const isOpen = openId === work.id;
+            const isSample = isSampleId(work.id);
 
             return (
               <li key={work.id} className="border border-[var(--color-line)] bg-[var(--color-paper)]">
@@ -124,17 +134,21 @@ export function StudentWorkManager({ works }: { works: WorkContent[] }) {
                     </p>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setOpenId(isOpen ? null : work.id)}
-                    aria-expanded={isOpen}
-                    className="label shrink-0 border border-[var(--color-line)] px-3 py-2 transition-colors duration-300 hover:border-[var(--color-ink)]"
-                  >
-                    {isOpen ? 'Tutup' : 'Edit'}
-                  </button>
+                  {isSample ? (
+                    <SampleRowBadge />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setOpenId(isOpen ? null : work.id)}
+                      aria-expanded={isOpen}
+                      className="label shrink-0 border border-[var(--color-line)] px-3 py-2 transition-colors duration-300 hover:border-[var(--color-ink)]"
+                    >
+                      {isOpen ? 'Tutup' : 'Edit'}
+                    </button>
+                  )}
                 </div>
 
-                {isOpen ? (
+                {isOpen && !isSample ? (
                   <div className="border-t border-[var(--color-line)] px-6 py-6">
                     <ActionForm
                       action={saveStudentWork}

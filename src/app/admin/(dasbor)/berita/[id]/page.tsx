@@ -4,6 +4,7 @@ import { getNews } from '@/lib/content';
 import { AdminHeading, AdminPanel } from '@/components/admin/AdminShell';
 import { NewsForm } from '@/components/admin/managers/NewsManager';
 import { saveNews } from '@/app/admin/content-actions';
+import { isSampleId } from '@/lib/sample-id';
 import { DeleteNewsButton } from '@/components/admin/managers/DeleteNewsButton';
 import { formatDateId } from '@/lib/utils';
 
@@ -17,13 +18,21 @@ export const dynamic = 'force-dynamic';
  * reachable here even though `getNewsBySlug` deliberately filters drafts out of
  * the public site. That separation is the point: the public read path and the
  * admin read path must not share a visibility filter.
+ *
+ * A sample article is looked up here too, and that is deliberate — the list has
+ * to show it, or the owner cannot see what the page will look like. But it must
+ * not reach the form: its id is `sample-news-1`, there is no such row, and saving
+ * would fail. So a sample id is treated as what it is — an address that does not
+ * exist — and `notFound()` sends the owner back rather than into a form whose
+ * save button cannot work. The action refuses a sample id as well, for any path
+ * that does not come through this page.
  */
 export default async function EditNewsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const news = await getNews({ includeUnpublished: true });
   const article = news.find((item) => item.id === id);
 
-  if (!article) notFound();
+  if (!article || isSampleId(article.id)) notFound();
 
   return (
     <>

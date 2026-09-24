@@ -16,6 +16,8 @@ import {
   saveEvent,
   type ActionResult,
 } from '@/app/admin/content-actions';
+import { isSampleId } from '@/lib/sample-id';
+import { SampleContentPanel, SampleRowBadge } from '@/components/admin/SampleContentPanel';
 import type { EventContent } from '@/data/defaults';
 import { formatDateId, toDateTimeAttribute } from '@/lib/utils';
 
@@ -51,6 +53,8 @@ export function EventManager({ events }: { events: EventContent[] }) {
   // SEO or progressive-enhancement reason to prefer it.
   const [now] = useState(() => Date.now());
 
+  const sampleCount = events.filter((event) => isSampleId(event.id)).length;
+
   const onDelete = (id: string) => async (): Promise<ActionResult> => {
     const result = await deleteEvent(id);
     if (result.ok) router.refresh();
@@ -60,6 +64,8 @@ export function EventManager({ events }: { events: EventContent[] }) {
   return (
     <>
       <ActionNotice notice={notice} onDismiss={clear} />
+
+      <SampleContentPanel collection="kegiatan" count={sampleCount} />
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <button
@@ -113,6 +119,7 @@ export function EventManager({ events }: { events: EventContent[] }) {
           {events.map((event) => {
             const isOpen = openId === event.id;
             const isPast = new Date(event.date).getTime() < now;
+            const isSample = isSampleId(event.id);
 
             return (
               <li key={event.id} className="border border-[var(--color-line)] bg-[var(--color-paper)]">
@@ -127,19 +134,25 @@ export function EventManager({ events }: { events: EventContent[] }) {
                   </div>
 
                   <div className="flex shrink-0 items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setOpenId(isOpen ? null : event.id)}
-                      aria-expanded={isOpen}
-                      className="label border border-[var(--color-line)] px-3 py-2 transition-colors duration-300 hover:border-[var(--color-ink)]"
-                    >
-                      {isOpen ? 'Tutup' : 'Edit'}
-                    </button>
-                    <DeleteButton action={onDelete(event.id)} onDone={handle} />
+                    {isSample ? (
+                      <SampleRowBadge />
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setOpenId(isOpen ? null : event.id)}
+                          aria-expanded={isOpen}
+                          className="label border border-[var(--color-line)] px-3 py-2 transition-colors duration-300 hover:border-[var(--color-ink)]"
+                        >
+                          {isOpen ? 'Tutup' : 'Edit'}
+                        </button>
+                        <DeleteButton action={onDelete(event.id)} onDone={handle} />
+                      </>
+                    )}
                   </div>
                 </div>
 
-                {isOpen ? (
+                {isOpen && !isSample ? (
                   <div className="border-t border-[var(--color-line)] px-6 py-6">
                     <ActionForm
                       action={saveEvent}

@@ -14,6 +14,8 @@ import {
   useActionNotice,
 } from '@/components/admin/FormFields';
 import { deleteNews, toggleNewsPublished, type ActionResult } from '@/app/admin/content-actions';
+import { isSampleId } from '@/lib/sample-id';
+import { SampleContentPanel, SampleRowBadge } from '@/components/admin/SampleContentPanel';
 import type { NewsContent } from '@/data/defaults';
 import { cn, formatDateId, slugify } from '@/lib/utils';
 
@@ -50,6 +52,8 @@ export function NewsManager({ news }: { news: NewsContent[] }) {
     draf: news.filter((item) => !item.published).length,
   };
 
+  const sampleCount = news.filter((item) => isSampleId(item.id)).length;
+
   const onToggle = (id: string, published: boolean) => async (): Promise<ActionResult> => {
     const result = await toggleNewsPublished(id, published);
     if (result.ok) router.refresh();
@@ -65,6 +69,8 @@ export function NewsManager({ news }: { news: NewsContent[] }) {
   return (
     <>
       <ActionNotice notice={notice} onDismiss={clear} />
+
+      <SampleContentPanel collection="berita" count={sampleCount} />
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div role="group" aria-label="Saring berita" className="flex flex-wrap gap-2">
@@ -111,46 +117,56 @@ export function NewsManager({ news }: { news: NewsContent[] }) {
         </div>
       ) : (
         <ul className="flex flex-col gap-4">
-          {filtered.map((item) => (
-            <li key={item.id} className="border border-[var(--color-line)] bg-[var(--color-paper)]">
-              <div className="flex flex-col gap-5 px-5 py-5 sm:flex-row sm:items-center">
-                <div className="relative h-20 w-full shrink-0 overflow-hidden border border-[var(--color-line)] sm:h-16 sm:w-24">
-                  {item.coverImage ? (
-                    <Image src={item.coverImage} alt="" fill sizes="96px" className="object-cover" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-[var(--color-paper-warm)]">
-                      <span className="label text-[var(--color-text-faint)]">Tanpa gambar</span>
-                    </div>
-                  )}
+          {filtered.map((item) => {
+            const isSample = isSampleId(item.id);
+
+            return (
+              <li key={item.id} className="border border-[var(--color-line)] bg-[var(--color-paper)]">
+                <div className="flex flex-col gap-5 px-5 py-5 sm:flex-row sm:items-center">
+                  <div className="relative h-20 w-full shrink-0 overflow-hidden border border-[var(--color-line)] sm:h-16 sm:w-24">
+                    {item.coverImage ? (
+                      <Image src={item.coverImage} alt="" fill sizes="96px" className="object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-[var(--color-paper-warm)]">
+                        <span className="label text-[var(--color-text-faint)]">Tanpa gambar</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate">{item.title}</p>
+                    <p className="label mt-1.5 text-[var(--color-text-faint)]">
+                      {formatDateId(item.publishedAt ?? item.createdAt)} · {item.category}
+                      {item.published ? '' : ' · belum diterbitkan'}
+                    </p>
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-2">
+                    {isSample ? (
+                      <SampleRowBadge />
+                    ) : (
+                      <>
+                        <PublishToggle
+                          published={item.published}
+                          action={onToggle(item.id, !item.published)}
+                          onDone={handle}
+                        />
+
+                        <Link
+                          href={`/admin/berita/${item.id}`}
+                          className="label border border-[var(--color-line)] px-3 py-2 transition-colors duration-300 hover:border-[var(--color-ink)]"
+                        >
+                          Edit
+                        </Link>
+
+                        <DeleteButton action={onDelete(item.id)} onDone={handle} />
+                      </>
+                    )}
+                  </div>
                 </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="truncate">{item.title}</p>
-                  <p className="label mt-1.5 text-[var(--color-text-faint)]">
-                    {formatDateId(item.publishedAt ?? item.createdAt)} · {item.category}
-                    {item.published ? '' : ' · belum diterbitkan'}
-                  </p>
-                </div>
-
-                <div className="flex shrink-0 items-center gap-2">
-                  <PublishToggle
-                    published={item.published}
-                    action={onToggle(item.id, !item.published)}
-                    onDone={handle}
-                  />
-
-                  <Link
-                    href={`/admin/berita/${item.id}`}
-                    className="label border border-[var(--color-line)] px-3 py-2 transition-colors duration-300 hover:border-[var(--color-ink)]"
-                  >
-                    Edit
-                  </Link>
-
-                  <DeleteButton action={onDelete(item.id)} onDone={handle} />
-                </div>
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </>
