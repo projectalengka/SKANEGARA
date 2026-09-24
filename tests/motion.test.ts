@@ -27,6 +27,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
+import { code } from './source';
 
 const globalCss = readFileSync(new URL('../src/styles/global.css', import.meta.url), 'utf8');
 const animationsTs = readFileSync(new URL('../src/lib/animations.ts', import.meta.url), 'utf8');
@@ -364,6 +365,93 @@ describe('the hero illustration flag fits its box', () => {
       rule,
       /white-space:\s*nowrap/,
       'the flag must be allowed to wrap, or a long word is clipped by the parent overflow:hidden',
+    );
+  });
+});
+
+/*
+ * A closed menu that still paints.
+ *
+ * ---------------------------------------------------------------------------
+ * The owner sent three screenshots from a phone on 2026-09-24 with the words
+ * "ada beberapa garis yang muncul gajelas". They were right, and the cause was
+ * a difference of one element:
+ *
+ *     <li className="border-b border-[var(--color-line)] last:border-b-0">
+ *       <Link className={menuOpen ? '... opacity-100' : '... opacity-0'}>
+ *
+ * The hairline sits on the `<li>`; the `opacity-0` sits on the `<Link>` inside
+ * it. **Opacity does not travel upwards**, so with the menu closed the text
+ * vanished and the borders stayed painted. `primaryNav` holds six items and the
+ * last drops its border, so the closed menu drew exactly **five** hairlines
+ * across the hero.
+ *
+ * `inert` and `aria-hidden` were already on the panel, which is what made this
+ * hard to see: the panel *was* removed from interaction and from the
+ * accessibility tree, so every non-visual signal said "closed". Only the pixels
+ * disagreed. And because the panel is `fixed inset-0`, the lines held their
+ * screen position while the page scrolled underneath — which is what turns five
+ * hairlines into "lines from nowhere".
+ *
+ * Measured with `outputs/verify-mobile-menu-lines.mjs`, which photographs the
+ * viewport three times and counts painted rows: nine lines with the panel
+ * rendered, four with it hidden — five of them the menu's. The same probe now
+ * reports zero leaked and five when open, so the fix hides the menu without
+ * killing it.
+ *
+ * The invariant a source test can hold: **the panel must be hidden from
+ * painting, not merely from interaction.** `visibility: hidden` takes the whole
+ * subtree out at once, so this cannot return for whatever child is added next.
+ */
+describe('the closed mobile menu paints nothing', () => {
+  /** The class list of the menu panel, comments stripped. */
+  function panelClasses(): string {
+    const src = code('src/components/navigation/SiteHeader.tsx');
+    const at = src.indexOf('id="menu-seluler"');
+    assert.notEqual(at, -1, 'the mobile menu panel must keep id="menu-seluler"');
+
+    const block = src.slice(at, at + 2000);
+    const open = block.indexOf('className={cn(');
+    assert.notEqual(open, -1, 'the panel must declare its classes through cn()');
+
+    return block.slice(open, block.indexOf(')}', open));
+  }
+
+  it('toggles a visibility state, not only pointer-events', () => {
+    const cls = panelClasses();
+
+    assert.match(
+      cls,
+      /invisible/,
+      'a closed panel must leave the painting tree — opacity on a child does not hide the parent\'s borders',
+    );
+    assert.match(
+      cls,
+      /menuOpen\s*\?\s*'visible/,
+      'visibility must be driven by menuOpen, or the menu can never appear',
+    );
+  });
+
+  it('still removes the closed panel from interaction and the a11y tree', () => {
+    const src = code('src/components/navigation/SiteHeader.tsx');
+
+    assert.match(src, /inert=\{!menuOpen\}/, 'a closed panel must be inert');
+    assert.match(src, /aria-hidden=\{!menuOpen\}/, 'a closed panel must be hidden from screen readers');
+  });
+
+  it('keeps the borders inside the panel, so hiding the panel hides them', () => {
+    const src = code('src/components/navigation/SiteHeader.tsx');
+
+    // The nav list must live inside the panel subtree. If a border were hoisted
+    // out of it — onto the header itself, say — `invisible` on the panel would
+    // stop covering it and the hairlines would come back.
+    const panelAt = src.indexOf('id="menu-seluler"');
+    const listAt = src.indexOf('border-b border-[var(--color-line)] last:border-b-0');
+
+    assert.notEqual(listAt, -1, 'the mobile nav list should still draw its separators');
+    assert.ok(
+      listAt > panelAt,
+      'the nav separators must stay inside the panel, or hiding the panel will not hide them',
     );
   });
 });

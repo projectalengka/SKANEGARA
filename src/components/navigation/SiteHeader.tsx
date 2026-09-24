@@ -287,7 +287,28 @@ export function SiteHeader({ schoolName }: { schoolName: string }) {
         data-lenis-prevent
         className={cn(
           'fixed inset-0 z-40 lg:hidden',
-          menuOpen ? 'pointer-events-auto' : 'pointer-events-none',
+          /*
+            `inert` and `aria-hidden` remove the closed panel from interaction and
+            from the accessibility tree — but neither of them stops it from being
+            *drawn*. That gap was visible on a phone.
+
+            The hairlines live on the `<li>` (`border-b border-[var(--color-line)]
+            last:border-b-0`), while `opacity-0` sits on the `<Link>` inside it,
+            and opacity does not travel upwards. So a closed menu still painted
+            five hairlines straight across the hero — one per nav item, since
+            `primaryNav` holds six and the last one drops its border. Because the
+            panel is `fixed`, those lines also stayed put while the page scrolled,
+            which is what makes them read as "lines from nowhere" rather than as
+            a menu (owner report, 24 September 2026).
+
+            `visibility: hidden` takes the whole subtree out of painting in one
+            move, so this cannot come back for whatever child is added next. The
+            500ms matches the overlay's own fade so the close animation still
+            finishes: `visibility` is a discrete property, so it flips at the end
+            of the transition on the way out and immediately on the way in.
+          */
+          'transition-[visibility] duration-500',
+          menuOpen ? 'visible pointer-events-auto' : 'invisible pointer-events-none',
         )}
       >
         <div

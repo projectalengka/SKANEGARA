@@ -1068,6 +1068,50 @@ item menentukan potongan, dan urutan itu diatur dari kolom Urutan di dasbor.
 > setiap bagian". Berkas itu **tidak ikut ke repositori** (lihat `.gitignore`),
 > jadi tabel di atas adalah rujukan yang tersimpan di sini.
 
+### Garis hantu dari panel menu seluler yang tertutup
+
+Keluhan pemilik proyek (24 September 2026): di ponsel muncul "beberapa garis
+yang muncul gajelas". Tiga tangkapan layar — dua di hero, satu di footer —
+ternyata **satu bug yang sama**.
+
+`SiteHeader.tsx` menaruh `border-b` pada `<li>` tetapi `opacity-0` pada `<Link>`
+**di dalamnya**, dan `opacity` tidak merambat ke atas. Jadi saat menu tertutup
+teksnya hilang sementara garisnya tetap tergambar. Panelnya `fixed inset-0 z-40`,
+sehingga garis-garis itu melayang pada koordinat viewport yang tetap dan ikut
+diam saat halaman digulir. Di footer yang gelap, lima garis terang `#e2e2e2` itu
+jatuh tepat di bawah beberapa tautan dan terbaca seperti garis bawah.
+`primaryNav` berisi enam item dan yang terakhir memakai `last:border-b-0`, jadi
+jumlah yang bocor tepat **lima**.
+
+`inert` dan `aria-hidden` **tidak** menghentikan penggambaran — keduanya hanya
+mencabut interaksi dan pohon aksesibilitas. Yang menghentikannya adalah
+`visibility: hidden`, dan itu dipakai pada panelnya (`invisible`/`visible` +
+`transition-[visibility]`) supaya tidak bisa kembali untuk anak apa pun yang
+ditambahkan nanti.
+
+> **Potret elemen tidak bisa melihat bug ini.** `footer.screenshot()` memotret
+> kotak elemen, dan elemen `fixed` yang jatuh di luar kotak itu tidak ikut
+> terekam — potret footer selalu tampak bersih. Yang harus dipotret adalah
+> viewport, pada beberapa posisi gulir.
+
+```bash
+node outputs/verify-mobile-menu-lines.mjs                                  # bocor: harus 0
+BASE=https://skagara.vercel.app node outputs/verify-mobile-menu-lines.mjs
+node outputs/probe-lines-viewport.mjs                                      # garis per posisi gulir
+TAG=sesudah node outputs/probe-lines-viewport.mjs
+```
+
+| Pengukuran (viewport 390 px) | Deploy lama | Sesudah perbaikan |
+| --- | --- | --- |
+| Garis bocor saat menu tertutup | **5** — y = 274, 335, 396, 457, 518 | **0** |
+| Garis milik panel saat menu terbuka | 10 | 10 — menunya utuh |
+| Garis di dasar halaman `/` | **6** — `73, 275, 336, 397, 458, 519` | **1** — hanya `73`, garis header |
+| Garis di dasar `/program-keahlian` | **6** | **1** |
+
+Gerbang regresinya ada di `tests/motion.test.ts` (`the closed mobile menu paints
+nothing`) dan sudah dibuktikan **gagal** saat bug-nya dikembalikan, lalu lulus
+saat diperbaiki.
+
 ### Memverifikasi produksi, bukan hanya localhost
 
 Semua probe di atas menerima `BASE`, jadi bisa diarahkan ke situs yang sudah
