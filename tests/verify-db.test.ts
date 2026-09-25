@@ -21,24 +21,26 @@ import { defaultEvents, defaultNews } from '../src/data/defaults';
 const source = readFileSync(new URL('../scripts/verify-db.ts', import.meta.url), 'utf8');
 
 describe('verify-db enforces the content rule', () => {
-  it('asserts news and events are empty, not merely readable', () => {
-    // The whole point: a non-zero count here means somebody invented school
-    // news or an agenda. That must be a failure, not a note.
-    assert.match(
+  it('melaporkan jumlah berita dan kegiatan tanpa menggagalkan verifikasi', () => {
+    // Bentuk lamanya `check('kegiatan kosong', n('kegiatan') === 0, ...)` benar
+    // selama tidak ada yang pernah menulis ke tabel itu. Sejak tombol "Pakai
+    // sebagai data saya" ada, pemilik yang mengisi agenda sendiri adalah
+    // perilaku yang diharapkan — terukur 2026-09-25 basis data berisi 4
+    // kegiatan hasil adopsi. Gerbang yang merah pada perilaku benar akan
+    // diabaikan orang, jadi angkanya dilaporkan sebagai catatan.
+    assert.match(source, /note\('berita'/, 'verify-db harus melaporkan jumlah berita');
+    assert.match(source, /note\('kegiatan'/, 'verify-db harus melaporkan jumlah kegiatan');
+    assert.doesNotMatch(
       source,
-      /check\('berita kosong',\s*n\('berita'\) === 0/,
-      'verify-db must assert the news table is empty',
-    );
-    assert.match(
-      source,
-      /check\('kegiatan kosong',\s*n\('kegiatan'\) === 0/,
-      'verify-db must assert the events table is empty',
+      /check\('kegiatan kosong'/,
+      'jangan kembalikan gerbang yang merah saat pemilik mengisi agenda sendiri',
     );
   });
 
   it('still matches the seed, which seeds neither', () => {
-    // If the seed ever starts writing news or events, this test and the
-    // verification script would disagree — and the disagreement is the signal.
+    // Kalau seed mulai menulis berita atau kegiatan, uji ini gagal — dan di
+    // sinilah aturan itu benar-benar ditegakkan, bukan pada basis data hidup
+    // yang isinya sudah bercampur dengan pekerjaan pemilik.
     assert.equal(defaultNews.length, 0, 'the seed must not invent news');
     assert.equal(defaultEvents.length, 0, 'the seed must not invent events');
   });

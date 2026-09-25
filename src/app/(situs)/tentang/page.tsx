@@ -42,15 +42,16 @@ export default async function AboutPage() {
             </div>
           </div>
 
+          {/* Foto sekolah. Selama pemilik belum mengunggahnya, yang tampil
+              adalah placeholder `public/images/hero.svg` — dan `alt`-nya kosong
+              dengan sengaja. Alt yang mendeskripsikan "foto" yang tidak ada
+              adalah klaim palsu kepada setiap pembaca layar; versi pertama
+              halaman ini melakukan tepat itu. Begitu fotonya sungguhan, alt-nya
+              boleh menyebutnya, karena sekarang memang foto. */}
           <div className="relative mt-16 aspect-16/9 overflow-hidden lg:mt-24" data-image-reveal>
             <Image
-              src="/images/hero.svg"
-              // The alt used to claim this was a photograph of activity at the
-              // school. It is a drawn placeholder, and an alt text that
-              // describes an imaginary photograph is a factual claim made to
-              // every screen reader user. `alt=""` marks it as decorative,
-              // which is what it honestly is.
-              alt=""
+              src={profile.image || '/images/hero.svg'}
+              alt={profile.image ? `Foto ${profile.schoolName}` : ''}
               fill
               sizes="100vw"
               className="object-cover"

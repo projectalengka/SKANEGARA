@@ -24,25 +24,30 @@ datasource db {
 /// The single school profile row. `slug` is always "utama" so a lookup is
 /// unambiguous and the row can be upserted idempotently by the seed.
 model SchoolProfile {
-  id          String   @id @default(cuid())
-  slug        String   @unique @default("utama")
-  schoolName  String   @default("SMK Jayanegara")
-  tagline     String   @default("")
-  heroLines   String[] @default([])
-  description String   @default("")
-  history     String   @default("")
-  vision      String   @default("")
-  mission     String[] @default([])
-  address     String   @default("")
-  city        String   @default("Mojokerto")
-  province    String   @default("Jawa Timur")
-  phone       String   @default("")
-  whatsapp    String   @default("")
-  email       String   @default("")
-  instagram   String   @default("")
-  youtube     String   @default("")
-  mapsUrl     String   @default("")
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(cuid())
+  slug          String   @unique @default("utama")
+  schoolName    String   @default("SMK Jayanegara")
+  tagline       String   @default("")
+  heroLines     String[] @default([])
+  description   String   @default("")
+  history       String   @default("")
+  vision        String   @default("")
+  mission       String[] @default([])
+  address       String   @default("")
+  city          String   @default("Mojokerto")
+  province      String   @default("Jawa Timur")
+  phone         String   @default("")
+  whatsapp      String   @default("")
+  email         String   @default("")
+  instagram     String   @default("")
+  youtube       String   @default("")
+  mapsUrl       String   @default("")
+  /// Foto sekolah: gambar lebar di halaman Tentang dan pratinjau tautan saat
+  /// situs dibagikan. Kosong berarti halaman memakai placeholder
+  /// `public/images/hero.svg`, bukan berarti gambar rusak.
+  image         String   @default("")
+  imagePublicId String   @default("")
+  updatedAt     DateTime @updatedAt
 }
 
 /// A competency programme (jurusan), e.g. Desain Komunikasi Visual.

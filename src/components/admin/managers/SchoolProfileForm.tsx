@@ -1,7 +1,7 @@
 'use client';
 
-import { ActionForm, TextArea, TextField } from '@/components/admin/FormFields';
-import { saveSchoolProfile } from '@/app/admin/content-actions';
+import { ActionForm, ImageUploadField, TextArea, TextField } from '@/components/admin/FormFields';
+import { saveSchoolProfile, uploadContentImage } from '@/app/admin/content-actions';
 import type { SchoolProfileContent } from '@/data/defaults';
 
 /**
@@ -17,6 +17,11 @@ import type { SchoolProfileContent } from '@/data/defaults';
  * this in is thinking about the school, not about the schema.
  */
 export function SchoolProfileForm({ profile }: { profile: SchoolProfileContent }) {
+  // Folder unggah ditentukan di sini, bukan di dalam komponen unggahnya, supaya
+  // keputusan "gambar ini disimpan di mana" tetap terbaca di tempat
+  // pemakaiannya — pola yang sama dengan ProgramManager dan GalleryManager.
+  const upload = (formData: FormData) => uploadContentImage(formData, 'profil');
+
   return (
     <ActionForm action={saveSchoolProfile} submitLabel="Simpan Profil">
       {(state) => {
@@ -55,6 +60,28 @@ export function SchoolProfileForm({ profile }: { profile: SchoolProfileContent }
                   hint="Satu baris per baris judul. Maksimal dua baris agar tetap terbaca."
                   defaultValue={profile.heroLines.join('\n')}
                   rows={2}
+                />
+              </div>
+            </section>
+
+            <section className="border border-[var(--color-line)] bg-[var(--color-paper)] px-6 py-6">
+              <h2 className="display text-[length:var(--step-3)]">Foto Sekolah</h2>
+              <p className="mt-2 text-[length:var(--step-0)] text-[var(--color-text-muted)]">
+                Foto ini tampil sebagai gambar lebar di halaman <strong>Tentang Kami</strong>, dan
+                sebagai gambar pratinjau saat tautan situs dibagikan ke WhatsApp atau media sosial.
+                Selama belum diunggah, halaman memakai placeholder yang jujur menyatakan fotonya
+                belum ada — bukan gambar yang berpura-pura menjadi foto sekolah.
+              </p>
+
+              <div className="mt-6">
+                <ImageUploadField
+                  name="image"
+                  label="Foto Sekolah"
+                  upload={upload}
+                  defaultUrl={profile.image}
+                  defaultPublicId={profile.imagePublicId}
+                  hint="Pakai foto lanskap. Rasio 16:9 paling pas karena bagian tengah foto yang paling terlihat."
+                  error={errors.image}
                 />
               </div>
             </section>

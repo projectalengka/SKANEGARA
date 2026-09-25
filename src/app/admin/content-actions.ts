@@ -223,7 +223,22 @@ export async function saveSchoolProfile(formData: FormData): Promise<ActionResul
       instagram: read(formData, 'instagram'),
       youtube: read(formData, 'youtube'),
       mapsUrl: read(formData, 'mapsUrl'),
+      // `ImageUploadField name="image"` memancarkan dua input: `image` berisi
+      // URL dan `imagePublicId` berisi id aset. Keduanya wajib dibaca — tanpa
+      // yang kedua, id tersimpan sebagai string kosong, `deleteImage()` tidak
+      // pernah berjalan, dan setiap foto yang diganti tinggal di basis data
+      // selamanya. `tests/media.test.ts` menghitung pasangan ini.
+      image: read(formData, 'image'),
+      imagePublicId: read(formData, 'imagePublicId'),
     };
+
+    // Dibaca sebelum menulis, untuk membandingkan foto lama dan baru. Tanpa ini
+    // setiap penggantian foto meninggalkan aset yatim yang tetap memakan kuota
+    // dan tetap muncul di `npm run media:bersihkan` sebagai "dirujuk konten: 0".
+    const previous = await prisma.schoolProfile.findUnique({
+      where: { slug: 'utama' },
+      select: { imagePublicId: true },
+    });
 
     // Upsert on the fixed slug rather than create, so saving twice does not
     // produce two profile rows and a nondeterministic `findFirst`.
@@ -232,6 +247,14 @@ export async function saveSchoolProfile(formData: FormData): Promise<ActionResul
       create: { slug: 'utama', ...data },
       update: data,
     });
+
+    // Setelah barisnya tersimpan, bukan sebelumnya: kalau penghapusan gagal,
+    // yang tersisa hanyalah aset yatim — sedangkan urutan sebaliknya akan
+    // meninggalkan baris yang menunjuk gambar yang sudah tidak ada, dan itu
+    // tampil sebagai gambar rusak di situs publik.
+    if (previous?.imagePublicId && previous.imagePublicId !== data.imagePublicId) {
+      await deleteImage(previous.imagePublicId);
+    }
 
     revalidateContent(mainTags.profile, mainTags.sections);
     return { ok: true, message: 'Data berhasil disimpan.' };

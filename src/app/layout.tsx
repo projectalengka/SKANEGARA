@@ -53,13 +53,22 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: profile.schoolName,
       title: `${profile.schoolName} — ${profile.tagline}`,
       description: profile.description || `${profile.schoolName} di ${profile.city}, ${profile.province}.`,
-      images: [{ url: '/images/hero.svg', width: 1920, height: 1200, alt: profile.schoolName }],
+      // Foto sekolah yang diunggah pemilik dipakai sebagai gambar pratinjau;
+      // placeholder hanya dipakai selama fotonya belum ada. Dimensi 1920×1200
+      // hanya disebut untuk placeholder, karena ukuran aset unggahan tidak
+      // diketahui di sini dan menyebut angka yang salah lebih buruk daripada
+      // tidak menyebutnya.
+      images: [
+        profile.image
+          ? { url: profile.image, alt: profile.schoolName }
+          : { url: '/images/hero.svg', width: 1920, height: 1200, alt: profile.schoolName },
+      ],
     },
     twitter: {
       card: 'summary_large_image',
       title: `${profile.schoolName} — ${profile.tagline}`,
       description: profile.description || `${profile.schoolName} di ${profile.city}, ${profile.province}.`,
-      images: ['/images/hero.svg'],
+      images: [profile.image || '/images/hero.svg'],
     },
     robots: {
       index: true,

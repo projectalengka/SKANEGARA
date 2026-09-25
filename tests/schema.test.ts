@@ -17,7 +17,9 @@
  *
  *   1. The migrations directory exists and contains an init migration.
  *   2. That migration creates every table the schema declares.
- *   3. It creates every column, with no extras left behind.
+ *   3. It creates every column, with no extras left behind — termasuk kolom
+ *      yang ditambahkan migrasi berikutnya lewat `ALTER TABLE … ADD COLUMN`,
+ *      bukan hanya yang ada di `CREATE TABLE` pertama.
  *   4. It contains no destructive statement — an init migration that drops
  *      something is a mistake, and one that runs `db:deploy` against production
  *      would be a serious one.
@@ -89,7 +91,44 @@ function columns(source: string, pattern: RegExp): Record<string, string[]> {
 
 const migration = () => allMigrations();
 const initMigration = () => read(initMigrationUrl);
-const migrationColumns = () => columns(migration(), /CREATE TABLE "(\w+)" \(([\s\S]*?)\n\);/g);
+
+/**
+ * Kolom yang ditambahkan `ALTER TABLE … ADD COLUMN`.
+ *
+ * Migrasi pertama *membuat* tabel; migrasi berikutnya *menambah kolom*. Versi
+ * sebelumnya hanya membaca `CREATE TABLE`, sehingga kolom yang lahir dari
+ * `ALTER TABLE` dilaporkan "hilang dari migrasi" — padahal ada, dan `db:deploy`
+ * sudah menerapkannya. Peringatan palsu itu muncul persis saat
+ * `20260925000000_add_school_profile_image` ditulis.
+ *
+ * Satu pernyataan `ALTER TABLE` boleh memuat beberapa `ADD COLUMN`, dan hanya
+ * baris pertama yang mengulang nama tabelnya — jadi seluruh pernyataan dibaca
+ * sampai titik koma, bukan baris per baris.
+ */
+function alteredColumns(source: string): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+
+  for (const statement of source.matchAll(/ALTER TABLE "?(\w+)"?([\s\S]*?);/g)) {
+    const table = statement[1] as string;
+    const body = statement[2] as string;
+    const added = [...body.matchAll(/\bADD COLUMN\s+"?([A-Za-z_]\w*)"?/g)].map((m) => m[1] as string);
+    if (added.length === 0) continue;
+    out[table] = [...(out[table] ?? []), ...added];
+  }
+
+  return out;
+}
+
+/** Kolom sebagaimana ditinggalkan seluruh migrasi: dibuat, lalu diubah. */
+function migrationColumns(): Record<string, string[]> {
+  const created = columns(migration(), /CREATE TABLE "(\w+)" \(([\s\S]*?)\n\);/g);
+
+  for (const [table, names] of Object.entries(alteredColumns(migration()))) {
+    created[table] = [...(created[table] ?? []), ...names];
+  }
+
+  return created;
+}
 
 describe('the migration exists at all', () => {
   it('has a migrations directory with an init migration', () => {

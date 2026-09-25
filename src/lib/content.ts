@@ -224,6 +224,11 @@ function mergeProfile(
     instagram: prefer(row.instagram, fallback.instagram),
     youtube: prefer(row.youtube, fallback.youtube),
     mapsUrl: prefer(row.mapsUrl, fallback.mapsUrl),
+    // Keduanya ikut baris basis data apa adanya. `prefer` hanya menolong saat
+    // keduanya kosong; kalau pemilik menghapus fotonya, nilai kosong itu memang
+    // yang diinginkan dan halaman kembali ke placeholder.
+    image: prefer(row.image, fallback.image),
+    imagePublicId: prefer(row.imagePublicId, fallback.imagePublicId),
   };
 }
 

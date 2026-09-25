@@ -16,9 +16,10 @@
  *
  *   1. Koneksi benar-benar terbuka.
  *   2. Setiap tabel ada dan bisa dibaca (menangkap migrasi yang belum jalan).
- *   3. Bentuk data hasil seed sesuai harapan — termasuk yang harus **nol**:
- *      berita dan kegiatan, karena mengarang agenda sekolah adalah pelanggaran
- *      aturan konten proyek ini.
+ *   3. Bentuk data hasil seed sesuai harapan. Berita dan kegiatan hanya
+ *      **dilaporkan**, bukan digagalkan: 0 pada basis data baru, dan lebih
+ *      dari 0 berarti pemilik sudah mengisi sendiri. Gerbang "jangan mengarang
+ *      agenda" hidup di `tests/verify-db.test.ts`, pada sumber seed.
  *   4. Penyimpanan gambar melaporkan angkanya dengan jujur. Kolom `bytes` harus
  *      sama dengan panjang `data`-nya, karena laporan kuota di dasbor adalah
  *      satu agregat di atas kolom itu — dan kuota yang salah lapor berakhir
@@ -55,6 +56,18 @@ function fail(label: string, detail: string): void {
 function check(label: string, condition: boolean, detail: string): void {
   if (condition) ok(label, detail);
   else fail(label, detail);
+}
+
+/**
+ * Melaporkan sebuah angka tanpa menggagalkan verifikasi.
+ *
+ * Dipakai untuk hal yang jawabannya bergantung pada **apakah pemilik sudah
+ * mengisi konten**, bukan pada benar atau salahnya kode. Membedakan keduanya
+ * penting: gerbang yang menyala merah pada perilaku yang benar akan diabaikan
+ * orang, dan sesudah itu ia tidak menjaga apa pun.
+ */
+function note(label: string, detail: string): void {
+  console.log(`  --    ${label.padEnd(30)} ${detail}`);
 }
 
 async function main(): Promise<void> {
@@ -132,8 +145,19 @@ async function main(): Promise<void> {
     check('program keahlian', n('program') >= 1, `harus ada isinya, dapat ${n('program')}`);
 
     // Aturan konten proyek ini: jangan pernah mengarang berita atau agenda.
-    check('berita kosong', n('berita') === 0, `harus 0 (jangan mengarang berita), dapat ${n('berita')}`);
-    check('kegiatan kosong', n('kegiatan') === 0, `harus 0 (jangan mengarang agenda), dapat ${n('kegiatan')}`);
+    // Gerbang yang sesungguhnya ada di `tests/verify-db.test.ts`, yang menuntut
+    // `defaultNews` dan `defaultEvents` kosong — yaitu bahwa **seed** tidak
+    // mengarang apa pun. Itu properti sumber, dan ia tidak bisa berubah tanpa
+    // uji itu memerah.
+    //
+    // Di sini angkanya hanya dilaporkan. Bentuk lamanya adalah
+    // `check(..., n('kegiatan') === 0)` terhadap basis data hidup, dan itu
+    // keliru bunyi sejak tombol "Pakai sebagai data saya" ada: terukur
+    // 2026-09-25, basis data berisi 4 kegiatan hasil adopsi — isian pemilik
+    // yang sah, bukan karangan seed, tapi cukup untuk memerahkan verifikasi dan
+    // menyembunyikan temuan yang sungguhan di baris-baris lain.
+    note('berita', `${n('berita')} baris — 0 pada basis data baru, lebih dari 0 berarti pemilik sudah mengisi`);
+    note('kegiatan', `${n('kegiatan')} baris — 0 pada basis data baru, lebih dari 0 berarti pemilik sudah mengisi`);
 
     // -----------------------------------------------------------------------
     // 3. Apakah isinya benar, bukan sekadar ada.

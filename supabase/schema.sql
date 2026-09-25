@@ -65,6 +65,8 @@ CREATE TABLE IF NOT EXISTS "SchoolProfile" (
     instagram   TEXT        NOT NULL DEFAULT '',
     youtube     TEXT        NOT NULL DEFAULT '',
     "mapsUrl"   TEXT        NOT NULL DEFAULT '',
+    image       TEXT        NOT NULL DEFAULT '',
+    "imagePublicId" TEXT    NOT NULL DEFAULT '',
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "SchoolProfile_pkey" PRIMARY KEY (id)

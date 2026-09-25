@@ -340,6 +340,40 @@ jalan.
 > dan satu kemunculan saja sudah cukup untuk menipu pemeriksaan yang longgar.
 > Lihat `tests/media.test.ts` bagian 7.
 
+### Foto sekolah: di mana mengunggahnya
+
+Gambar lebar di halaman **Tentang Kami** — yang juga dipakai sebagai gambar
+pratinjau saat tautan situs dibagikan ke WhatsApp atau media sosial — diunggah
+dari **Dasbor › Profil Sekolah › bagian "Foto Sekolah"**. Satu kolom di halaman
+yang sama dengan nama, tagline, sejarah, dan kontak; tidak ada halaman terpisah.
+
+Nilainya tersimpan di `SchoolProfile.image` + `SchoolProfile.imagePublicId`
+(migrasi `20260925000000_add_school_profile_image`).
+
+Selama belum diunggah, halaman memakai `public/images/hero.svg`: placeholder yang
+menggambar tulisan *"FOTO SEKOLAH — UNGGAH DI DASBOR › PROFIL SEKOLAH"*, dengan
+`alt` **kosong**. Alt yang mendeskripsikan "foto" padahal yang tampil adalah
+gambar coretan adalah klaim palsu kepada setiap pembaca layar.
+
+> **Kenapa ini baru ada.** Sampai 25 September 2026, halaman Tentang menulis
+> `src="/images/hero.svg"` langsung di JSX dan model `SchoolProfile` tidak punya
+> kolom gambar sama sekali. Placeholder-nya berbunyi "unggah melalui dasbor",
+> tetapi tidak ada tempat mengunggahnya. Pemilik mencarinya, tidak menemukannya,
+> lalu melaporkannya — dan yang salah bukan navigasinya, melainkan janji di dalam
+> gambarnya. Sekarang teks placeholder itu menyebut lokasinya secara persis.
+
+Mengganti foto berarti aset lama dihapus lewat `deleteImage()`, dan urutannya
+disengaja: baris disimpan lebih dulu, aset lama dihapus sesudahnya. Kalau
+penghapusan gagal, yang tersisa hanyalah aset yatim beberapa kilobyte —
+sedangkan urutan sebaliknya meninggalkan baris yang menunjuk gambar yang sudah
+tidak ada, dan itu tampil sebagai **gambar rusak di situs publik**.
+
+> **`db:seed` berjalan pada setiap deploy.** Karena itu blok `update` pada
+> `seedSchoolProfile()` sengaja **tidak** menyentuh kolom gambar: kalau ia
+> menyentuhnya, foto yang baru diunggah pemilik akan hilang pada deploy
+> berikutnya — tanpa galat, tanpa jejak. `tests/school-photo.test.ts` menjaga
+> itu, dan gerbangnya dibuktikan memerah saat bug-nya dikembalikan.
+
 Karena kolom unggah mengirim berkas **begitu dipilih** — supaya gambar terlihat
 sebelum disimpan — memilih berkas lalu menutup formulir tanpa menyimpan
 meninggalkan satu aset yatim. Itu wajar, bukan bug. Bersihkan dengan:
@@ -1216,6 +1250,44 @@ komponen panel, bukan di empat pemanggil yang masing-masing harus ingat:
 versi pertamanya mengembalikan panel tanpa syarat, dan `/admin/galeri`
 menampilkan *"0 foto contoh ini menjadi milik Anda"*. Terukur, bukan dugaan.
 
+### Memverifikasi unggah foto sekolah
+
+Dua probe, karena keduanya membuktikan hal yang berbeda dan tidak saling
+menggantikan.
+
+`probe-foto-sekolah.ts` membuktikan **jalur tulisnya diterima skema**: ia membuat
+aset gambar dan menjalankan `upsert` yang persis dipanggil `saveSchoolProfile` di
+dalam satu transaksi yang **sengaja digagalkan** di akhir, lalu membandingkan
+jumlah baris sebelum dan sesudah. Aman dijalankan terhadap basis data produksi.
+
+```bash
+npx tsx outputs/probe-foto-sekolah.ts
+```
+
+`probe-foto-dasbor.mjs` membuktikan **rantai penuhnya di browser** — unggah
+berkas, action menyimpan, halaman publik merender fotonya, lalu dihapus dan
+halaman kembali ke placeholder. Ia membersihkan dirinya sendiri, jadi situs
+ditinggalkan persis seperti semula.
+
+```bash
+node --env-file=.env outputs/probe-foto-dasbor.mjs
+BASE=https://skagara.vercel.app node --env-file=.env outputs/probe-foto-dasbor.mjs
+```
+
+> **Jebakan yang ditemukan probe ini, dan harganya.** Next 16 menstrim **kerangka**
+> halaman lebih dulu, lalu mengirim isinya di dalam `<div hidden id="S:n">` dan
+> memindahkannya keluar setelah `load`. Interaksi yang dijalankan tepat setelah
+> `waitUntil: 'load'` karena itu menyentuh simpul yang masih tersembunyi:
+> `setInputFiles` **berhasil** memasang berkas, tetapi `onChange` React tidak
+> pernah menyala dan **tidak ada satu pun permintaan unggah** — probe melaporkan
+> "tidak ada pesan" pada kode yang sepenuhnya benar. Tangkapan layar halaman pada
+> saat itu juga kosong, yang sempat terbaca sebagai "halaman dasbornya rusak".
+>
+> Pelajarannya sama dengan jebakan animasi lain di proyek ini: **tunggu keadaan,
+> bukan durasi.** Sekarang probe menunggu `#unggah-image` benar-benar terlihat
+> sebelum menyentuhnya, dan memeriksa bahwa gambarnya punya kotak — bukan sekadar
+> ada di dalam HTML, karena `page.content()` juga memuat wadah tersembunyi itu.
+
 ### Memverifikasi produksi, bukan hanya localhost
 
 Semua probe di atas menerima `BASE`, jadi bisa diarahkan ke situs yang sudah
@@ -1393,6 +1465,29 @@ Gambar cadangan ada di `public/images/`. Bangkitkan ulang dengan:
 
 ```bash
 node --import tsx scripts/make-placeholders.ts
+```
+
+### Foto sekolah tidak muncul setelah diunggah
+
+Periksa tiga hal, berurutan:
+
+1. **Tersimpan?** Buka **Dasbor › Profil Sekolah**. Kolom "Foto Sekolah" harus
+   memperlihatkan fotonya. Kalau masih *"Belum ada gambar"*, unggahannya belum
+   tersimpan — berkas memang dikirim begitu dipilih, tetapi barisnya baru ditulis
+   saat **Simpan Profil** ditekan.
+2. **Di halaman mana?** Foto itu tampil di `/tentang` dan pada pratinjau tautan.
+   Ia **tidak** mengubah gambar di bagian "Tentang" beranda, yang memakai rasio
+   tegak 4:5 dan punya placeholder sendiri.
+3. **Cache peramban?** `/tentang` dirender ulang setiap permintaan
+   (`force-dynamic` di `src/app/layout.tsx`), jadi tidak ada masa tunggu di sisi
+   server. Kalau masih lama, itu cache peramban — muat ulang dengan
+   `Ctrl+Shift+R`.
+
+Untuk membuktikan seluruh rantainya tanpa menebak:
+
+```bash
+npx tsx outputs/probe-foto-sekolah.ts
+node --env-file=.env outputs/probe-foto-dasbor.mjs
 ```
 
 ### Font tampil berbeda dari desain

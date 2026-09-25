@@ -1074,6 +1074,8 @@ export const SchoolProfileScalarFieldEnum = {
   instagram: 'instagram',
   youtube: 'youtube',
   mapsUrl: 'mapsUrl',
+  image: 'image',
+  imagePublicId: 'imagePublicId',
   updatedAt: 'updatedAt'
 } as const
 

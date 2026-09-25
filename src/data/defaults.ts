@@ -48,6 +48,13 @@ export type SchoolProfileContent = {
   instagram: string;
   youtube: string;
   mapsUrl: string;
+  /**
+   * Foto sekolah — gambar lebar di halaman Tentang dan pratinjau tautan saat
+   * situs dibagikan. String kosong berarti halaman memakai placeholder
+   * `public/images/hero.svg`, bukan berarti gambarnya rusak.
+   */
+  image: string;
+  imagePublicId: string;
 };
 
 export const defaultSchoolProfile: SchoolProfileContent = {
@@ -68,6 +75,10 @@ export const defaultSchoolProfile: SchoolProfileContent = {
   instagram: '',
   youtube: '',
   mapsUrl: '',
+  // Sengaja kosong: situs memakai placeholder yang jujur mengatakan fotonya
+  // belum diunggah, bukan memakai gambar yang berpura-pura jadi foto sekolah.
+  image: '',
+  imagePublicId: '',
 };
 
 export type ProgramContent = {

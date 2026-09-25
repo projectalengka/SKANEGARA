@@ -42,6 +42,8 @@ export type SchoolProfileMinAggregateOutputType = {
   instagram: string | null
   youtube: string | null
   mapsUrl: string | null
+  image: string | null
+  imagePublicId: string | null
   updatedAt: Date | null
 }
 
@@ -62,6 +64,8 @@ export type SchoolProfileMaxAggregateOutputType = {
   instagram: string | null
   youtube: string | null
   mapsUrl: string | null
+  image: string | null
+  imagePublicId: string | null
   updatedAt: Date | null
 }
 
@@ -84,6 +88,8 @@ export type SchoolProfileCountAggregateOutputType = {
   instagram: number
   youtube: number
   mapsUrl: number
+  image: number
+  imagePublicId: number
   updatedAt: number
   _all: number
 }
@@ -106,6 +112,8 @@ export type SchoolProfileMinAggregateInputType = {
   instagram?: true
   youtube?: true
   mapsUrl?: true
+  image?: true
+  imagePublicId?: true
   updatedAt?: true
 }
 
@@ -126,6 +134,8 @@ export type SchoolProfileMaxAggregateInputType = {
   instagram?: true
   youtube?: true
   mapsUrl?: true
+  image?: true
+  imagePublicId?: true
   updatedAt?: true
 }
 
@@ -148,6 +158,8 @@ export type SchoolProfileCountAggregateInputType = {
   instagram?: true
   youtube?: true
   mapsUrl?: true
+  image?: true
+  imagePublicId?: true
   updatedAt?: true
   _all?: true
 }
@@ -243,6 +255,8 @@ export type SchoolProfileGroupByOutputType = {
   instagram: string
   youtube: string
   mapsUrl: string
+  image: string
+  imagePublicId: string
   updatedAt: Date
   _count: SchoolProfileCountAggregateOutputType | null
   _min: SchoolProfileMinAggregateOutputType | null
@@ -286,6 +300,8 @@ export type SchoolProfileWhereInput = {
   instagram?: Prisma.StringFilter<"SchoolProfile"> | string
   youtube?: Prisma.StringFilter<"SchoolProfile"> | string
   mapsUrl?: Prisma.StringFilter<"SchoolProfile"> | string
+  image?: Prisma.StringFilter<"SchoolProfile"> | string
+  imagePublicId?: Prisma.StringFilter<"SchoolProfile"> | string
   updatedAt?: Prisma.DateTimeFilter<"SchoolProfile"> | Date | string
 }
 
@@ -308,6 +324,8 @@ export type SchoolProfileOrderByWithRelationInput = {
   instagram?: Prisma.SortOrder
   youtube?: Prisma.SortOrder
   mapsUrl?: Prisma.SortOrder
+  image?: Prisma.SortOrder
+  imagePublicId?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
@@ -333,6 +351,8 @@ export type SchoolProfileWhereUniqueInput = Prisma.AtLeast<{
   instagram?: Prisma.StringFilter<"SchoolProfile"> | string
   youtube?: Prisma.StringFilter<"SchoolProfile"> | string
   mapsUrl?: Prisma.StringFilter<"SchoolProfile"> | string
+  image?: Prisma.StringFilter<"SchoolProfile"> | string
+  imagePublicId?: Prisma.StringFilter<"SchoolProfile"> | string
   updatedAt?: Prisma.DateTimeFilter<"SchoolProfile"> | Date | string
 }, "id" | "slug">
 
@@ -355,6 +375,8 @@ export type SchoolProfileOrderByWithAggregationInput = {
   instagram?: Prisma.SortOrder
   youtube?: Prisma.SortOrder
   mapsUrl?: Prisma.SortOrder
+  image?: Prisma.SortOrder
+  imagePublicId?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.SchoolProfileCountOrderByAggregateInput
   _max?: Prisma.SchoolProfileMaxOrderByAggregateInput
@@ -383,6 +405,8 @@ export type SchoolProfileScalarWhereWithAggregatesInput = {
   instagram?: Prisma.StringWithAggregatesFilter<"SchoolProfile"> | string
   youtube?: Prisma.StringWithAggregatesFilter<"SchoolProfile"> | string
   mapsUrl?: Prisma.StringWithAggregatesFilter<"SchoolProfile"> | string
+  image?: Prisma.StringWithAggregatesFilter<"SchoolProfile"> | string
+  imagePublicId?: Prisma.StringWithAggregatesFilter<"SchoolProfile"> | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"SchoolProfile"> | Date | string
 }
 
@@ -405,6 +429,8 @@ export type SchoolProfileCreateInput = {
   instagram?: string
   youtube?: string
   mapsUrl?: string
+  image?: string
+  imagePublicId?: string
   updatedAt?: Date | string
 }
 
@@ -427,6 +453,8 @@ export type SchoolProfileUncheckedCreateInput = {
   instagram?: string
   youtube?: string
   mapsUrl?: string
+  image?: string
+  imagePublicId?: string
   updatedAt?: Date | string
 }
 
@@ -449,6 +477,8 @@ export type SchoolProfileUpdateInput = {
   instagram?: Prisma.StringFieldUpdateOperationsInput | string
   youtube?: Prisma.StringFieldUpdateOperationsInput | string
   mapsUrl?: Prisma.StringFieldUpdateOperationsInput | string
+  image?: Prisma.StringFieldUpdateOperationsInput | string
+  imagePublicId?: Prisma.StringFieldUpdateOperationsInput | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -471,6 +501,8 @@ export type SchoolProfileUncheckedUpdateInput = {
   instagram?: Prisma.StringFieldUpdateOperationsInput | string
   youtube?: Prisma.StringFieldUpdateOperationsInput | string
   mapsUrl?: Prisma.StringFieldUpdateOperationsInput | string
+  image?: Prisma.StringFieldUpdateOperationsInput | string
+  imagePublicId?: Prisma.StringFieldUpdateOperationsInput | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -493,6 +525,8 @@ export type SchoolProfileCreateManyInput = {
   instagram?: string
   youtube?: string
   mapsUrl?: string
+  image?: string
+  imagePublicId?: string
   updatedAt?: Date | string
 }
 
@@ -515,6 +549,8 @@ export type SchoolProfileUpdateManyMutationInput = {
   instagram?: Prisma.StringFieldUpdateOperationsInput | string
   youtube?: Prisma.StringFieldUpdateOperationsInput | string
   mapsUrl?: Prisma.StringFieldUpdateOperationsInput | string
+  image?: Prisma.StringFieldUpdateOperationsInput | string
+  imagePublicId?: Prisma.StringFieldUpdateOperationsInput | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -537,6 +573,8 @@ export type SchoolProfileUncheckedUpdateManyInput = {
   instagram?: Prisma.StringFieldUpdateOperationsInput | string
   youtube?: Prisma.StringFieldUpdateOperationsInput | string
   mapsUrl?: Prisma.StringFieldUpdateOperationsInput | string
+  image?: Prisma.StringFieldUpdateOperationsInput | string
+  imagePublicId?: Prisma.StringFieldUpdateOperationsInput | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -567,6 +605,8 @@ export type SchoolProfileCountOrderByAggregateInput = {
   instagram?: Prisma.SortOrder
   youtube?: Prisma.SortOrder
   mapsUrl?: Prisma.SortOrder
+  image?: Prisma.SortOrder
+  imagePublicId?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
@@ -587,6 +627,8 @@ export type SchoolProfileMaxOrderByAggregateInput = {
   instagram?: Prisma.SortOrder
   youtube?: Prisma.SortOrder
   mapsUrl?: Prisma.SortOrder
+  image?: Prisma.SortOrder
+  imagePublicId?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
@@ -607,6 +649,8 @@ export type SchoolProfileMinOrderByAggregateInput = {
   instagram?: Prisma.SortOrder
   youtube?: Prisma.SortOrder
   mapsUrl?: Prisma.SortOrder
+  image?: Prisma.SortOrder
+  imagePublicId?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
@@ -657,6 +701,8 @@ export type SchoolProfileSelect<ExtArgs extends runtime.Types.Extensions.Interna
   instagram?: boolean
   youtube?: boolean
   mapsUrl?: boolean
+  image?: boolean
+  imagePublicId?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["schoolProfile"]>
 
@@ -679,6 +725,8 @@ export type SchoolProfileSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   instagram?: boolean
   youtube?: boolean
   mapsUrl?: boolean
+  image?: boolean
+  imagePublicId?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["schoolProfile"]>
 
@@ -701,6 +749,8 @@ export type SchoolProfileSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   instagram?: boolean
   youtube?: boolean
   mapsUrl?: boolean
+  image?: boolean
+  imagePublicId?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["schoolProfile"]>
 
@@ -723,10 +773,12 @@ export type SchoolProfileSelectScalar = {
   instagram?: boolean
   youtube?: boolean
   mapsUrl?: boolean
+  image?: boolean
+  imagePublicId?: boolean
   updatedAt?: boolean
 }
 
-export type SchoolProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "slug" | "schoolName" | "tagline" | "heroLines" | "description" | "history" | "vision" | "mission" | "address" | "city" | "province" | "phone" | "whatsapp" | "email" | "instagram" | "youtube" | "mapsUrl" | "updatedAt", ExtArgs["result"]["schoolProfile"]>
+export type SchoolProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "slug" | "schoolName" | "tagline" | "heroLines" | "description" | "history" | "vision" | "mission" | "address" | "city" | "province" | "phone" | "whatsapp" | "email" | "instagram" | "youtube" | "mapsUrl" | "image" | "imagePublicId" | "updatedAt", ExtArgs["result"]["schoolProfile"]>
 
 export type $SchoolProfilePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "SchoolProfile"
@@ -750,6 +802,13 @@ export type $SchoolProfilePayload<ExtArgs extends runtime.Types.Extensions.Inter
     instagram: string
     youtube: string
     mapsUrl: string
+    /**
+     * Foto sekolah: gambar lebar di halaman Tentang dan pratinjau tautan saat
+     * situs dibagikan. Kosong berarti halaman memakai placeholder
+     * `public/images/hero.svg`, bukan berarti gambar rusak.
+     */
+    image: string
+    imagePublicId: string
     updatedAt: Date
   }, ExtArgs["result"]["schoolProfile"]>
   composites: {}
@@ -1192,6 +1251,8 @@ export interface SchoolProfileFieldRefs {
   readonly instagram: Prisma.FieldRef<"SchoolProfile", 'String'>
   readonly youtube: Prisma.FieldRef<"SchoolProfile", 'String'>
   readonly mapsUrl: Prisma.FieldRef<"SchoolProfile", 'String'>
+  readonly image: Prisma.FieldRef<"SchoolProfile", 'String'>
+  readonly imagePublicId: Prisma.FieldRef<"SchoolProfile", 'String'>
   readonly updatedAt: Prisma.FieldRef<"SchoolProfile", 'DateTime'>
 }
     
