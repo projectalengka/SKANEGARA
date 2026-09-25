@@ -14,6 +14,18 @@ import type { SectionContent, SchoolProfileContent } from '@/data/defaults';
  * Vision and mission are rendered as a definition list rather than bullet
  * points, because they are a claim and its supporting statements — a relationship,
  * not a list.
+ *
+ * ## The photograph
+ *
+ * This column used to be hard-wired to `/images/gallery-01.svg` — a seed
+ * placeholder, and one that reads as a broken box: a #f2f2f2 rectangle carrying
+ * an 8%-opacity grid, on a #f2f2f2 section. Almost nothing about it is visible.
+ *
+ * The school photo the owner uploads in the dashboard now appears here when it
+ * exists, and the placeholder is only the fallback. That is the same rule the
+ * tentang page already follows; the homepage was simply the one place that had
+ * not been wired up, so the school's own photograph was showing on `/tentang`
+ * and a grey grid was showing on the front page.
  */
 export function About({
   profile,
@@ -28,6 +40,7 @@ export function About({
 
   const hasVision = profile.vision.trim().length > 0;
   const hasMission = profile.mission.some((item) => item.trim().length > 0);
+  const photo = profile.image || '/images/gallery-01.svg';
 
   return (
     <section className="section-y bg-[var(--color-paper-warm)]" aria-labelledby="judul-tentang">
@@ -39,7 +52,7 @@ export function About({
             </p>
             <h2
               id="judul-tentang"
-              className="display mt-6 text-[length:var(--step-7)] leading-[0.9]"
+              className="display mt-6 text-[length:var(--step-6)] leading-[0.95]"
               data-reveal
             >
               {prefix}
@@ -47,9 +60,9 @@ export function About({
               <em>{name}</em>
             </h2>
 
-            <div className="relative mt-10 aspect-4/5 overflow-hidden" data-image-reveal>
+            <div className="relative mt-8 aspect-4/5 overflow-hidden bg-[var(--color-paper)]" data-image-reveal>
               <Image
-                src="/images/gallery-01.svg"
+                src={photo}
                 alt={`Lingkungan ${profile.schoolName}`}
                 fill
                 sizes="(max-width: 1024px) 100vw, 33vw"
@@ -58,12 +71,12 @@ export function About({
             </div>
           </div>
 
-          <div className="lg:col-span-8 lg:pt-16">
+          <div className="lg:col-span-8 lg:pt-10">
             <p className="prose-body !text-[var(--color-text)]" data-reveal>
               {section.body}
             </p>
 
-            <div className="mt-12 border-t border-[var(--color-line)] pt-10">
+            <div className="mt-10 border-t border-[var(--color-line)] pt-8">
               <h3 className="label text-[var(--color-text-muted)]" data-reveal>
                 Sejarah
               </h3>
@@ -73,7 +86,7 @@ export function About({
             </div>
 
             {hasVision || hasMission ? (
-              <dl className="mt-10 grid gap-10 border-t border-[var(--color-line)] pt-10 sm:grid-cols-2">
+              <dl className="mt-8 grid gap-10 border-t border-[var(--color-line)] pt-8 sm:grid-cols-2">
                 {hasVision ? (
                   <div data-reveal>
                     <dt className="label text-[var(--color-text-muted)]">Visi</dt>
@@ -103,7 +116,7 @@ export function About({
 
             <Link
               href={section.ctaHref || '/tentang'}
-              className="btn btn--ghost mt-12"
+              className="btn btn--ghost mt-10"
               data-reveal
             >
               {section.ctaLabel || 'Selengkapnya'}

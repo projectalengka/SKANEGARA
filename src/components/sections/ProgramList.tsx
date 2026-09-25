@@ -65,7 +65,7 @@ export function ProgramList({ programs }: { programs: ProgramContent[] }) {
           transform: `translate3d(${pointer.x + 28}px, ${pointer.y - 130}px, 0)`,
         }}
       >
-        <div className="relative h-[17rem] w-[13rem] overflow-hidden">
+        <div className="relative aspect-4/5 w-[13rem] overflow-hidden bg-[var(--color-paper-warm)]">
           {programs.map((program, index) => (
             <Image
               key={program.id}

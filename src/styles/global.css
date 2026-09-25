@@ -2,6 +2,65 @@
 @import './fonts.css';
 
 /* ===========================================================================
+   Layout primitives — declared first, on purpose
+   ---------------------------------------------------------------------------
+   `@utility` must sit at the top level of the stylesheet, so these cannot live
+   inside the `@layer components` block below. They are written here, above it,
+   rather than halfway down, because of what the previous arrangement cost.
+
+   ## The unlayered-CSS bug this file had
+
+   The `@layer components` block used to close right after `.rule-dark`. Every
+   rule written after that point — the reveal primitives, the hero, the gallery
+   dialog, `.btn`, the form fields, `.sr-only`, `.skip-link` — was therefore
+   **outside any layer**. In the CSS cascade, unlayered rules beat *every*
+   layered rule, including all of Tailwind's utilities.
+
+   The consequence was silent and it was live: `hidden` on the header's
+   "Hubungi Kami" button did nothing, because `.btn { display: inline-flex }`
+   sat unlayered and outranked it. Measured on production at 390px, that button
+   was `display: flex`, 155px wide — **40% of the header** on the device most
+   visitors use, competing with the school's own wordmark. Nobody had noticed
+   because the only visible symptom was "the phone header looks crowded".
+
+   It also explains the `!px-4 !py-2.5` on that same button. Those two
+   `!important` flags are not a style choice; they are a workaround for a
+   cascade bug that had never been diagnosed. They are gone now.
+
+   The general rule this restores: a component class may be *overridden* by a
+   utility. That is the entire reason Tailwind has layers, and a component block
+   that escapes its layer silently disables it.
+   =========================================================================== */
+
+@utility shell {
+  width: 100%;
+  max-width: 96rem;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+@utility shell-wide {
+  width: 100%;
+  max-width: 120rem;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+@utility section-y {
+  padding-block: var(--section-y);
+}
+
+/* The two other tiers of the spacing scale. A section picks one on purpose —
+   see the note on the scale in tokens.css. */
+@utility section-y-tight {
+  padding-block: var(--space-tight);
+}
+
+@utility section-y-wide {
+  padding-block: var(--space-wide);
+}
+
+/* ===========================================================================
    Base
    =========================================================================== */
 
@@ -132,8 +191,20 @@
     line-height: 0.94;
     /* Sans butuh tracking lebih rapat daripada serif pada ukuran besar:
        tanpa serif, huruf-huruf berdiri lebih berjarak dan judul besar jadi
-       terasa longgar. Nilai ini yang membuatnya tetap rapat dan mahal. */
-    letter-spacing: -0.035em;
+       terasa longgar. Nilai ini yang membuatnya tetap rapat dan mahal.
+       Nilai ini BENAR untuk 44px ke atas — lihat `.display-close` untuk
+       judul yang lebih kecil, tempat angka yang sama membuat huruf menempel. */
+    letter-spacing: var(--tracking-display);
+  }
+
+  /* Judul kecil: judul kartu, judul baris, nama karya. Ukurannya 18–32px, dan
+     pada rentang itu -0.035em terlalu rapat — huruf saling menempel dan kata
+     jadi sulit dipindai. Tracking-nya dilonggarkan, dan tinggi barisnya
+     dinaikkan karena teks dua baris pada 21px tidak boleh serapat judul 80px
+     yang selalu satu-dua kata. */
+  .display-close {
+    letter-spacing: var(--tracking-close);
+    line-height: 1.12;
   }
 
   .display em {
@@ -158,7 +229,10 @@
   .prose-body {
     max-width: var(--measure);
     font-size: var(--step-1);
-    line-height: 1.65;
+    /* 1.72, bukan 1.65: paragraf di sini dibaca murid dan orang tua di ponsel,
+       dan pada 15–18px baris yang terlalu rapat adalah keluhan pertama setiap
+       pembaca yang bukan desainer. */
+    line-height: 1.72;
     color: var(--color-text-muted);
   }
 
@@ -177,729 +251,749 @@
 }
 
 /* ===========================================================================
-   Layout primitives
-   =========================================================================== */
-
-@utility shell {
-  width: 100%;
-  max-width: 96rem;
-  margin-inline: auto;
-  padding-inline: var(--gutter);
-}
-
-@utility shell-wide {
-  width: 100%;
-  max-width: 120rem;
-  margin-inline: auto;
-  padding-inline: var(--gutter);
-}
-
-@utility section-y {
-  padding-block: var(--section-y);
-}
-
-/* ===========================================================================
-   Reveal primitives
+   Components, continued
    ---------------------------------------------------------------------------
-   The no-JS and reduced-motion contract: if the observer never runs, the
-   content must still be visible. So the *hidden* state is applied by a class
-   that only JavaScript adds. Absence of script means presence of content.
+   Why this is a second `@layer components` block instead of one big one: the
+   `@utility` declarations above must sit at the top level of the stylesheet —
+   Tailwind rejects them inside a layer. Multiple blocks with the same layer
+   name are legal CSS and merge in source order, so this is simply the same
+   layer, resumed.
+
+   Everything from here to the end of the file must stay INSIDE a layer. See
+   the note at the top of the file for what it cost when it did not.
    =========================================================================== */
 
-[data-reveal] {
-  --reveal-y: 22px;
-  --reveal-delay: 0ms;
-}
+@layer components {
+  /* ===========================================================================
+     Reveal primitives
+     ---------------------------------------------------------------------------
+     The no-JS and reduced-motion contract: if the observer never runs, the
+     content must still be visible. So the *hidden* state is applied by a class
+     that only JavaScript adds. Absence of script means presence of content.
+     =========================================================================== */
 
-/* The revealed state is carried by `data-revealed`, not by a `class`. That
-   matters less than it looks: React compares an element's *whole attribute set*
-   against its virtual DOM, so an extra attribute is still a diff and still
-   reported. It is a smaller diff than a class — React owns `className` outright
-   — but the thing that actually makes the write safe is the timing gate in
-   `RevealObserver.tsx`, which waits until React has taken ownership of the
-   element before writing. Both halves are needed; see that file for the
-   measurements. */
-.js [data-reveal] {
-  opacity: 0;
-  transform: translate3d(0, var(--reveal-y), 0);
-  will-change: opacity, transform;
-}
+  [data-reveal] {
+    /* 16px, bukan 22px. Diukur di beranda: 39 elemen ber-reveal pada halaman
+       12.348px. Pada jarak 22px dan durasi 1,1 detik, pengunjung yang menggulir
+       dengan kecepatan biasa bertemu elemen yang belum selesai muncul di hampir
+       setiap layar — halaman terasa berat, bukan hidup. Jarak yang lebih pendek
+       dan durasi yang lebih singkat membuat reveal terbaca sebagai ketenangan,
+       bukan sebagai penundaan. */
+    --reveal-y: 16px;
+    --reveal-delay: 0ms;
+  }
 
-.js [data-reveal][data-revealed] {
-  opacity: 1;
-  transform: none;
-  transition:
-    opacity 1.1s var(--ease-out) var(--reveal-delay),
-    transform 1.1s var(--ease-out) var(--reveal-delay);
-  will-change: auto;
-}
+  /* The revealed state is carried by `data-revealed`, not by a `class`. That
+     matters less than it looks: React compares an element's *whole attribute set*
+     against its virtual DOM, so an extra attribute is still a diff and still
+     reported. It is a smaller diff than a class — React owns `className` outright
+     — but the thing that actually makes the write safe is the timing gate in
+     `RevealObserver.tsx`, which waits until React has taken ownership of the
+     element before writing. Both halves are needed; see that file for the
+     measurements. */
+  .js [data-reveal] {
+    opacity: 0;
+    transform: translate3d(0, var(--reveal-y), 0);
+    will-change: opacity, transform;
+  }
 
-/* Image reveal: a wipe, not a fade. A fade says "here is a picture"; a wipe
-   says "here is a picture being uncovered", which is the editorial cue.
-   
-   ## Why the wipe is drawn on the image, not on the observed element
-   
-   The first version put `clip-path: inset(0 0 100% 0)` on the element that
-   carries `data-image-reveal`, and revealed it by removing that clip. It was a
-   deadlock, and it was measured: a fully-clipped element reports
-   `isIntersecting: false, intersectionRatio: 0` to IntersectionObserver *even
-   when centred in the viewport*. A controlled two-box test confirmed it — the
-   clipped box read `ratio: 0`, an identical unclipped box read `ratio: 0.3`.
-   
-   So the observer whose job was to un-clip the element could never see it. On
-   the built site that left 30 elements permanently invisible, including every
-   single image on /karya, /galeri and /berita. `img.complete` was true,
-   `naturalWidth` was real, `opacity` was 1 — and the element was clipped to
-   nothing. Nothing in a screenshot said so.
-   
-   The fix keeps the identical visual wipe and moves it one level in: the
-   observed element stays geometrically intact (so the observer can see it),
-   and its child image is what gets clipped. `> *` is the image, because
-   `next/image` with `fill` renders it as the direct child. */
-.js [data-image-reveal] > * {
-  clip-path: inset(0 0 100% 0);
-  transform: scale(1.06);
-  transition:
-    clip-path 1.2s var(--ease-out) var(--reveal-delay, 0ms),
-    transform 1.4s var(--ease-out) var(--reveal-delay, 0ms);
-}
-
-.js [data-image-reveal][data-revealed] > * {
-  clip-path: inset(0 0 0 0);
-  transform: scale(1);
-}
-
-/* Reduced motion: no wipe at all. The observer already reveals everything up
-   front when the preference is set; this makes the CSS agree rather than
-   relying on a class that a blocked script might never add. */
-@media (prefers-reduced-motion: reduce) {
-  .js [data-image-reveal] > * {
-    clip-path: none;
+  .js [data-reveal][data-revealed] {
+    opacity: 1;
     transform: none;
-    transition: none;
+    transition:
+      opacity 0.8s var(--ease-out) var(--reveal-delay),
+      transform 0.8s var(--ease-out) var(--reveal-delay);
+    will-change: auto;
   }
-}
 
-/* Line-by-line text reveal. Each line sits in its own overflow-hidden box,
-   so the text appears to rise out of the page rather than fade onto it. */
-.js .line-mask {
-  display: block;
-  overflow: hidden;
-  padding-block: 0.06em;
-  margin-block: -0.06em;
-}
-
-/* The hidden start state. Applied by CSS so that a line is already masked
-   before any script runs — the alternative, waiting for GSAP to hide it, means
-   a visible flash of the finished headline on every load.
-
-   Note there is deliberately NO `transition` here. The reveal is driven by GSAP
-   (`revealLines` / `heroEntrance`), and GSAP writes the transform inline on
-   every frame.
-
-   A CSS transition on the same property is not merely redundant, it is a bug
-   with a silent failure mode: GSAP detects the transition, refuses to fight it
-   on the `transform` shorthand, and splits the movement across the individual
-   `translate` property and `transform`. Animating `yPercent` then only moves
-   one channel and the line never appears. Measured against the shipping build:
-
-     translate: none; rotate: none; scale: none;
-     transform: translate(0%, 110%) translate(0px, 151.353px);
-
-   `yPercent: 0` collapses the first half; the 151.353px stays. The element is
-   present, opaque, and completely invisible — the harness sees a heading, the
-   visitor sees nothing. One engine, one property. */
-.js .line-mask > span {
-  display: block;
-  transform: translate3d(0, 110%, 0);
-}
-
-/* The attribute handoff, for the paths that reveal without tweening (the
-   IntersectionObserver fallback). `!important` because GSAP's inline transform
-   would otherwise win, and this rule only ever applies to an element GSAP has
-   not been asked to animate. */
-.js [data-revealed] .line-mask > span,
-.js .line-mask[data-revealed] > span {
-  transform: none;
-  transition: transform 1.1s var(--ease-out);
-  transition-delay: var(--line-delay, 0ms);
-}
-
-/* ===========================================================================
-   The hero — editorial masthead
-   ---------------------------------------------------------------------------
-   Type over image, not image behind type. The composition is:
-
-     masthead      a running head: the school's location on the left, an
-                   edition line on the right, separated by a hairline.
-     composition   the headline on the left at display scale, and a two-entry
-                   programme index on the right. The index is the only place an
-                   image appears, and it is small on purpose — a large
-                   photograph here would make the headline a caption.
-     bottom        tagline, calls to action, and the scroll cue.
-
-   Every value here is a token. Nothing in this block hardcodes a colour, so
-   re-branding stays a one-line change in tokens.css.
-   =========================================================================== */
-
-.hero-editorial {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  /* `100svh` rather than `100vh`: on a phone the dynamic toolbar would otherwise
-     make the hero taller than the visible viewport, and the bottom row — the
-     calls to action and the scroll cue — would sit below the fold. */
-  min-height: 100svh;
-  padding-block: calc(var(--nav-h) + 1.5rem) 2.5rem;
-  background: var(--color-paper);
-  overflow: hidden;
-}
-
-.hero-editorial__inner {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  gap: clamp(2rem, 5vw, 4.5rem);
-}
-
-/* -- Masthead ------------------------------------------------------------ */
-
-.hero-editorial__masthead {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--color-line);
-  color: var(--color-text-muted);
-}
-
-.hero-editorial__edition {
-  /* The right-hand running head. It reads as one line wherever it fits, which
-     is the intent — a running head split into two ragged fragments looks like
-     a mistake. But `nowrap` alone was a latent overflow: the string measures
-     ~324px at the smallest label size once letter-spacing is counted, and a
-     320px phone has 280px of it inside the gutter. The masthead is a wrapping
-     flex row, so the honest instruction is "keep it on one line while you can,
-     otherwise wrap" rather than a hard nowrap that pokes past the viewport.
-     `balance` keeps the wrapped result from looking accidental. */
-  text-wrap: balance;
-  color: var(--color-text-muted);
-}
-
-/* -- Composition --------------------------------------------------------- */
-
-.hero-editorial__composition {
-  display: grid;
-  flex: 1 1 auto;
-  align-content: center;
-  gap: clamp(2rem, 5vw, 4rem);
-  /* Single column on a phone: the index drops below the headline rather than
-     squeezing beside it, which is the only way both stay legible at 320px. */
-  grid-template-columns: minmax(0, 1fr);
-}
-
-@media (min-width: 1024px) {
-  .hero-editorial__composition {
-    /* The headline gets the larger share; the index is deliberately narrow. */
-    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
-    align-items: end;
-    gap: clamp(2rem, 4vw, 5rem);
+  /* Image reveal: a wipe, not a fade. A fade says "here is a picture"; a wipe
+     says "here is a picture being uncovered", which is the editorial cue.
+   
+     ## Why the wipe is drawn on the image, not on the observed element
+   
+     The first version put `clip-path: inset(0 0 100% 0)` on the element that
+     carries `data-image-reveal`, and revealed it by removing that clip. It was a
+     deadlock, and it was measured: a fully-clipped element reports
+     `isIntersecting: false, intersectionRatio: 0` to IntersectionObserver *even
+     when centred in the viewport*. A controlled two-box test confirmed it — the
+     clipped box read `ratio: 0`, an identical unclipped box read `ratio: 0.3`.
+   
+     So the observer whose job was to un-clip the element could never see it. On
+     the built site that left 30 elements permanently invisible, including every
+     single image on /karya, /galeri and /berita. `img.complete` was true,
+     `naturalWidth` was real, `opacity` was 1 — and the element was clipped to
+     nothing. Nothing in a screenshot said so.
+   
+     The fix keeps the identical visual wipe and moves it one level in: the
+     observed element stays geometrically intact (so the observer can see it),
+     and its child image is what gets clipped. `> *` is the image, because
+     `next/image` with `fill` renders it as the direct child. */
+  .js [data-image-reveal] > * {
+    clip-path: inset(0 0 100% 0);
+    transform: scale(1.06);
+    transition:
+      clip-path 0.9s var(--ease-out) var(--reveal-delay, 0ms),
+      transform 1.05s var(--ease-out) var(--reveal-delay, 0ms);
   }
-}
 
-.hero-editorial__copy {
-  min-width: 0;
-}
+  .js [data-image-reveal][data-revealed] > * {
+    clip-path: inset(0 0 0 0);
+    transform: scale(1);
+  }
 
-.hero-editorial__school {
-  color: var(--color-accent);
-}
+  /* Reduced motion: no wipe at all. The observer already reveals everything up
+     front when the preference is set; this makes the CSS agree rather than
+     relying on a class that a blocked script might never add. */
+  @media (prefers-reduced-motion: reduce) {
+    .js [data-image-reveal] > * {
+      clip-path: none;
+      transform: none;
+      transition: none;
+    }
+  }
 
-.hero-editorial__title {
-  margin-top: clamp(0.75rem, 2vw, 1.25rem);
-  /* The hero used to be its own hand-tuned clamp (2.5–8.5rem, a 3.4× range).
-     That range was wider than the whole rest of the scale combined, which is
-     why the headline felt like a different document from the page beneath it.
-     It is now --step-8, the top rung — dramatic because it is the loudest
-     thing on the scale, not because it opted out of the scale. */
-  font-size: var(--step-8);
-  line-height: 0.9;
-  color: var(--color-text);
-}
+  /* Line-by-line text reveal. Each line sits in its own overflow-hidden box,
+     so the text appears to rise out of the page rather than fade onto it. */
+  .js .line-mask {
+    display: block;
+    overflow: hidden;
+    padding-block: 0.06em;
+    margin-block: -0.06em;
+  }
 
-/* Each authored line is its own block. `splitLines` wraps these in masks, so
-   this only has to establish the stacking — the mask owns the clipping. */
-.hero-editorial__line {
-  display: block;
-}
+  /* The hidden start state. Applied by CSS so that a line is already masked
+     before any script runs — the alternative, waiting for GSAP to hide it, means
+     a visible flash of the finished headline on every load.
 
-/* The second and subsequent lines drop to weight 400 against the 600 of the
-   first. That weight contrast is the accent the old serif used to provide. */
-.hero-editorial__line--soft {
-  font-weight: 400;
-}
+     Note there is deliberately NO `transition` here. The reveal is driven by GSAP
+     (`revealLines` / `heroEntrance`), and GSAP writes the transform inline on
+     every frame.
 
-/* -- Programme index ----------------------------------------------------- */
+     A CSS transition on the same property is not merely redundant, it is a bug
+     with a silent failure mode: GSAP detects the transition, refuses to fight it
+     on the `transform` shorthand, and splits the movement across the individual
+     `translate` property and `transform`. Animating `yPercent` then only moves
+     one channel and the line never appears. Measured against the shipping build:
 
-.hero-editorial__index {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  min-width: 0;
-  border-top: 1px solid var(--color-line);
-  padding-top: 1rem;
-}
+       translate: none; rotate: none; scale: none;
+       transform: translate(0%, 110%) translate(0px, 151.353px);
 
-.hero-editorial__index-heading {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  color: var(--color-text-muted);
-}
+     `yPercent: 0` collapses the first half; the 151.353px stays. The element is
+     present, opaque, and completely invisible — the harness sees a heading, the
+     visitor sees nothing. One engine, one property. */
+  .js .line-mask > span {
+    display: block;
+    transform: translate3d(0, 110%, 0);
+  }
 
-.hero-program {
-  display: grid;
-  grid-template-columns: 3.5rem minmax(0, 1fr);
-  align-items: center;
-  gap: 0.9rem;
-  padding-block: 0.5rem;
-  border-bottom: 1px solid var(--color-line);
-}
+  /* The attribute handoff, for the paths that reveal without tweening (the
+     IntersectionObserver fallback). `!important` because GSAP's inline transform
+     would otherwise win, and this rule only ever applies to an element GSAP has
+     not been asked to animate. */
+  .js [data-revealed] .line-mask > span,
+  .js .line-mask[data-revealed] > span {
+    transform: none;
+    transition: transform 0.85s var(--ease-out);
+    transition-delay: var(--line-delay, 0ms);
+  }
 
-.hero-program:last-child {
-  border-bottom: 0;
-}
+  /* ===========================================================================
+     The hero — editorial masthead
+     ---------------------------------------------------------------------------
+     Type over image, not image behind type. The composition is:
 
-.hero-program__image {
-  position: relative;
-  display: block;
-  aspect-ratio: 4 / 5;
-  overflow: hidden;
-  background: var(--color-paper-warm);
-}
+       masthead      a running head: the school's location on the left, an
+                     edition line on the right, separated by a hairline.
+       composition   the headline on the left at display scale, and a two-entry
+                     programme index on the right. The index is the only place an
+                     image appears, and it is small on purpose — a large
+                     photograph here would make the headline a caption.
+       bottom        tagline, calls to action, and the scroll cue.
 
-.hero-program__image img {
-  transition: transform 0.9s var(--ease-out);
-}
+     Every value here is a token. Nothing in this block hardcodes a colour, so
+     re-branding stays a one-line change in tokens.css.
+     =========================================================================== */
 
-.hero-program:hover .hero-program__image img,
-.hero-program:focus-visible .hero-program__image img {
-  transform: scale(1.06);
-}
-
-/* The "Ilustrasi program" flag. Absolute inside the image box so it stays
-   legible over whatever artwork sits behind it.
-
-   ## Why it is allowed to grow upward instead of sitting flush at the bottom
-
-   The flag lies across the *width* of the image box, and in the desktop hero
-   that box is only 56px wide (`w-14`). Measured at 1440px and at 390px: the
-   string "Ilustrasi program" needs 61px on one line at 9px, so it wrapped to
-   three lines inside a 26px-tall box — 61 > 56 meant the first line was
-   clipped mid-word by the parent's `overflow: hidden`, and 3 x 9px = 27px
-   meant the last line was cut off vertically too. The close-up showed
-   "ILUSTRAS / PROGRAM": a label that was meant to clarify had become the most
-   obviously broken thing on the screen.
-
-   Two changes, both measured after:
-
-   - `font-size` drops to 0.5rem and `letter-spacing` to 0.04em, so the longest
-     word ("Ilustrasi") fits inside 56px instead of spilling past it.
-   - the box is padded on the sides and allowed to wrap to two lines, with
-     `hyphens: none` so no word is ever broken mid-character.
-
-   `overflow: hidden` stays on the parent — the flag is legible inside it now,
-   and the artwork behind it still must not bleed out of the box. */
-.hero-program__note {
-  position: absolute;
-  inset-inline: 0;
-  bottom: 0;
-  padding: 0.2rem 0.15rem;
-  background: color-mix(in srgb, var(--color-ink) 72%, transparent);
-  color: var(--color-paper);
-  /* Deliberately below --step--2 (10px). This caption sits inside a 96px
-     program thumbnail; at 10px it overflows the chip and the overflow clips
-     the word rather than wrapping it. The floor of the scale is a floor for
-     *reading text*, not for a two-word label on a postage stamp. */
-  font-size: 0.5rem;
-  line-height: 1.15;
-  letter-spacing: 0.04em;
-  text-align: center;
-  text-wrap: balance;
-  hyphens: none;
-  overflow-wrap: normal;
-}
-
-.hero-program__caption {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
-  min-width: 0;
-  color: var(--color-text);
-}
-
-.hero-program__caption .label {
-  color: var(--color-text-muted);
-}
-
-.hero-program:hover .hero-program__caption,
-.hero-program:focus-visible .hero-program__caption {
-  color: var(--color-accent);
-}
-
-.hero-program:hover .hero-program__caption .label,
-.hero-program:focus-visible .hero-program__caption .label {
-  color: var(--color-accent);
-}
-
-/* -- Bottom row ---------------------------------------------------------- */
-
-.hero-editorial__bottom {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1.25rem 2rem;
-  padding-top: clamp(1.5rem, 3vw, 2.5rem);
-  border-top: 1px solid var(--color-line);
-}
-
-.hero-editorial__bottom > p {
-  max-width: 26rem;
-  color: var(--color-text-muted);
-}
-
-.hero-editorial__actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem 1.5rem;
-}
-
-.hero-editorial__scroll {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--color-text-muted);
-  transition: color 0.4s var(--ease-out);
-}
-
-.hero-editorial__scroll:hover,
-.hero-editorial__scroll:focus-visible {
-  color: var(--color-accent);
-}
-
-/* On a phone the bottom row stacks: copy, then actions, then the cue. Three
-   items on one line at 320px would each be too narrow to read. */
-@media (max-width: 639px) {
-  .hero-editorial__bottom {
+  .hero-editorial {
+    position: relative;
+    display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    /* `100svh` rather than `100vh`: on a phone the dynamic toolbar would otherwise
+       make the hero taller than the visible viewport, and the bottom row — the
+       calls to action and the scroll cue — would sit below the fold. */
+    min-height: 100svh;
+    padding-block: calc(var(--nav-h) + 1.5rem) 2.5rem;
+    background: var(--color-paper);
+    overflow: hidden;
+  }
+
+  .hero-editorial__inner {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: clamp(2rem, 5vw, 4.5rem);
+  }
+
+  /* -- Masthead ------------------------------------------------------------ */
+
+  .hero-editorial__masthead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-line);
+    color: var(--color-text-muted);
+  }
+
+  .hero-editorial__edition {
+    /* The right-hand running head. It reads as one line wherever it fits, which
+       is the intent — a running head split into two ragged fragments looks like
+       a mistake. But `nowrap` alone was a latent overflow: the string measures
+       ~324px at the smallest label size once letter-spacing is counted, and a
+       320px phone has 280px of it inside the gutter. The masthead is a wrapping
+       flex row, so the honest instruction is "keep it on one line while you can,
+       otherwise wrap" rather than a hard nowrap that pokes past the viewport.
+       `balance` keeps the wrapped result from looking accidental. */
+    text-wrap: balance;
+    color: var(--color-text-muted);
+  }
+
+  /* -- Composition --------------------------------------------------------- */
+
+  .hero-editorial__composition {
+    display: grid;
+    flex: 1 1 auto;
+    align-content: center;
+    gap: clamp(2rem, 5vw, 4rem);
+    /* Single column on a phone: the index drops below the headline rather than
+       squeezing beside it, which is the only way both stay legible at 320px. */
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  @media (min-width: 1024px) {
+    .hero-editorial__composition {
+      /* The headline gets the larger share; the index is deliberately narrow. */
+      grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+      align-items: end;
+      gap: clamp(2rem, 4vw, 5rem);
+    }
+  }
+
+  .hero-editorial__copy {
+    min-width: 0;
+  }
+
+  .hero-editorial__school {
+    color: var(--color-accent);
+  }
+
+  .hero-editorial__title {
+    margin-top: clamp(0.75rem, 2vw, 1.25rem);
+    /* The hero used to be its own hand-tuned clamp (2.5–8.5rem, a 3.4× range).
+       That range was wider than the whole rest of the scale combined, which is
+       why the headline felt like a different document from the page beneath it.
+       It is now --step-8, the top rung — dramatic because it is the loudest
+       thing on the scale, not because it opted out of the scale. */
+    font-size: var(--step-8);
+    line-height: 0.9;
+    color: var(--color-text);
+  }
+
+  /* Each authored line is its own block. `splitLines` wraps these in masks, so
+     this only has to establish the stacking — the mask owns the clipping. */
+  .hero-editorial__line {
+    display: block;
+  }
+
+  /* The second and subsequent lines drop to weight 400 against the 600 of the
+     first. That weight contrast is the accent the old serif used to provide. */
+  .hero-editorial__line--soft {
+    font-weight: 400;
+  }
+
+  /* -- Programme index ----------------------------------------------------- */
+
+  .hero-editorial__index {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 0;
+    border-top: 1px solid var(--color-line);
+    padding-top: 1rem;
+  }
+
+  .hero-editorial__index-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    color: var(--color-text-muted);
+  }
+
+  .hero-program {
+    display: grid;
+    grid-template-columns: 3.5rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0.9rem;
+    padding-block: 0.5rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .hero-program:last-child {
+    border-bottom: 0;
+  }
+
+  .hero-program__image {
+    position: relative;
+    display: block;
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    background: var(--color-paper-warm);
+  }
+
+  .hero-program__image img {
+    transition: transform 0.9s var(--ease-out);
+  }
+
+  .hero-program:hover .hero-program__image img,
+  .hero-program:focus-visible .hero-program__image img {
+    transform: scale(1.06);
+  }
+
+  /* The "Ilustrasi program" flag. Absolute inside the image box so it stays
+     legible over whatever artwork sits behind it.
+
+     ## Why it is allowed to grow upward instead of sitting flush at the bottom
+
+     The flag lies across the *width* of the image box, and in the desktop hero
+     that box is only 56px wide (`w-14`). Measured at 1440px and at 390px: the
+     string "Ilustrasi program" needs 61px on one line at 9px, so it wrapped to
+     three lines inside a 26px-tall box — 61 > 56 meant the first line was
+     clipped mid-word by the parent's `overflow: hidden`, and 3 x 9px = 27px
+     meant the last line was cut off vertically too. The close-up showed
+     "ILUSTRAS / PROGRAM": a label that was meant to clarify had become the most
+     obviously broken thing on the screen.
+
+     Two changes, both measured after:
+
+     - `font-size` drops to 0.5rem and `letter-spacing` to 0.04em, so the longest
+       word ("Ilustrasi") fits inside 56px instead of spilling past it.
+     - the box is padded on the sides and allowed to wrap to two lines, with
+       `hyphens: none` so no word is ever broken mid-character.
+
+     `overflow: hidden` stays on the parent — the flag is legible inside it now,
+     and the artwork behind it still must not bleed out of the box. */
+  .hero-program__note {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    padding: 0.2rem 0.15rem;
+    background: color-mix(in srgb, var(--color-ink) 72%, transparent);
+    color: var(--color-paper);
+    /* Deliberately below --step--2 (10px). This caption sits inside a 96px
+       program thumbnail; at 10px it overflows the chip and the overflow clips
+       the word rather than wrapping it. The floor of the scale is a floor for
+       *reading text*, not for a two-word label on a postage stamp. */
+    font-size: 0.5rem;
+    line-height: 1.15;
+    letter-spacing: 0.04em;
+    text-align: center;
+    text-wrap: balance;
+    hyphens: none;
+    overflow-wrap: normal;
+  }
+
+  .hero-program__caption {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-width: 0;
+    color: var(--color-text);
+  }
+
+  .hero-program__caption .label {
+    color: var(--color-text-muted);
+  }
+
+  .hero-program:hover .hero-program__caption,
+  .hero-program:focus-visible .hero-program__caption {
+    color: var(--color-accent);
+  }
+
+  .hero-program:hover .hero-program__caption .label,
+  .hero-program:focus-visible .hero-program__caption .label {
+    color: var(--color-accent);
+  }
+
+  /* -- Bottom row ---------------------------------------------------------- */
+
+  .hero-editorial__bottom {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.25rem 2rem;
+    padding-top: clamp(1.5rem, 3vw, 2.5rem);
+    border-top: 1px solid var(--color-line);
+  }
+
+  .hero-editorial__bottom > p {
+    max-width: 26rem;
+    color: var(--color-text-muted);
+  }
+
+  .hero-editorial__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.5rem;
   }
 
   .hero-editorial__scroll {
-    order: 3;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--color-text-muted);
+    transition: color 0.4s var(--ease-out);
   }
-}
 
-/* ===========================================================================
-   Gallery lightbox
-   ---------------------------------------------------------------------------
-   A native `<dialog>` opened with `showModal()`. The browser then owns the top
-   layer, the inert curtain over the page, and the focus trap — so this block
-   only has to style the surface and the backdrop. The previous hand-rolled
-   `role="dialog"` + manual `inert` was an approximation of all of it.
+  .hero-editorial__scroll:hover,
+  .hero-editorial__scroll:focus-visible {
+    color: var(--color-accent);
+  }
 
-   `[open]` is used rather than a class because the element is rendered
-   unconditionally and visibility is a property of the element's own state.
-   =========================================================================== */
+  /* On a phone the bottom row stacks: copy, then actions, then the cue. Three
+     items on one line at 320px would each be too narrow to read. */
+  @media (max-width: 639px) {
+    .hero-editorial__bottom {
+      flex-direction: column;
+      align-items: flex-start;
+    }
 
-.gallery-dialog {
-  width: 100%;
-  max-width: none;
-  height: 100%;
-  max-height: none;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: var(--color-ink);
-  color: var(--color-paper);
-  overscroll-behavior: contain;
-}
+    .hero-editorial__scroll {
+      order: 3;
+    }
+  }
 
-.gallery-dialog::backdrop {
-  background: var(--color-ink);
-}
+  /* ===========================================================================
+     Gallery lightbox
+     ---------------------------------------------------------------------------
+     A native `<dialog>` opened with `showModal()`. The browser then owns the top
+     layer, the inert curtain over the page, and the focus trap — so this block
+     only has to style the surface and the backdrop. The previous hand-rolled
+     `role="dialog"` + manual `inert` was an approximation of all of it.
 
-/* A centred panel on a desktop, where a full-bleed black page for one photo
-   reads as a navigation rather than a lightbox. */
-@media (min-width: 768px) {
+     `[open]` is used rather than a class because the element is rendered
+     unconditionally and visibility is a property of the element's own state.
+     =========================================================================== */
+
   .gallery-dialog {
-    width: min(64rem, calc(100vw - 4rem));
-    height: min(46rem, calc(100svh - 4rem));
-    margin: auto;
-    border: 1px solid var(--color-line-dark);
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: var(--color-ink);
+    color: var(--color-paper);
+    overscroll-behavior: contain;
   }
 
   .gallery-dialog::backdrop {
-    background: color-mix(in srgb, var(--color-ink) 88%, transparent);
-    backdrop-filter: blur(4px);
-  }
-}
-
-/* ===========================================================================
-   Buttons
-   =========================================================================== */
-
-.btn {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.9rem 1.5rem;
-  border: 1px solid var(--color-ink);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono);
-  font-size: var(--step--1);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  line-height: 1;
-  overflow: hidden;
-  isolation: isolate;
-  transition: color 0.5s var(--ease-out);
-}
-
-/* The fill rises from the bottom on hover. Doing it with a pseudo-element
-   that is already painted keeps the animation on `transform`, so it costs a
-   compositor layer and nothing else. */
-.btn::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: var(--color-ink);
-  transform: translate3d(0, 101%, 0);
-  transition: transform 0.55s var(--ease-out);
-}
-
-.btn:hover::before,
-.btn:focus-visible::before {
-  transform: translate3d(0, 0, 0);
-}
-
-.btn--solid {
-  background: var(--color-ink);
-  color: var(--color-paper);
-}
-
-.btn--solid::before {
-  background: var(--color-accent);
-  transform: translate3d(0, 101%, 0);
-}
-
-.btn--solid:hover,
-.btn--solid:focus-visible {
-  color: var(--color-paper);
-}
-
-.btn--ghost {
-  border-color: var(--color-line);
-  color: var(--color-text);
-}
-
-.btn--ghost:hover,
-.btn--ghost:focus-visible {
-  color: var(--color-paper);
-  border-color: var(--color-ink);
-}
-
-.btn--on-dark {
-  border-color: rgb(255 255 255 / 0.28);
-  color: var(--color-paper);
-}
-
-.btn--on-dark::before {
-  background: var(--color-paper);
-}
-
-.btn--on-dark:hover,
-.btn--on-dark:focus-visible {
-  color: var(--color-ink);
-  border-color: var(--color-paper);
-}
-
-/* Filled white button, for a light-on-dark hero that is *not* full-bleed dark.
-   The editorial hero sits on white, so its primary action inverts: white text
-   on a hairline would disappear into the page. */
-.btn--paper {
-  background: var(--color-ink);
-  border-color: var(--color-ink);
-  color: var(--color-paper);
-}
-
-.btn--paper::before {
-  background: var(--color-accent);
-}
-
-.btn--paper:hover,
-.btn--paper:focus-visible {
-  color: var(--color-paper);
-  border-color: var(--color-accent);
-}
-
-.btn__arrow {
-  transition: transform 0.5s var(--ease-out);
-}
-
-.btn:hover .btn__arrow,
-.btn:focus-visible .btn__arrow {
-  transform: translate3d(4px, 0, 0);
-}
-
-/* Text link with a rule that draws itself in. */
-.link-line {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.link-line::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  bottom: -3px;
-  height: 1px;
-  width: 100%;
-  background: currentColor;
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.5s var(--ease-out);
-}
-
-.link-line:hover::after,
-.link-line:focus-visible::after {
-  transform: scaleX(1);
-}
-
-/* ===========================================================================
-   Forms — shared by the admin dashboard and the public contact form.
-   =========================================================================== */
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.field__label {
-  font-family: var(--font-mono);
-  font-size: var(--step--2);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-
-.field__input,
-.field__textarea,
-.field__select {
-  width: 100%;
-  padding: 0.75rem 0.9rem;
-  background: var(--color-paper);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-sm);
-  font-size: var(--step-0);
-  transition: border-color 0.3s var(--ease-out);
-}
-
-.field__input:hover,
-.field__textarea:hover,
-.field__select:hover {
-  border-color: var(--color-text-faint);
-}
-
-.field__input:focus,
-.field__textarea:focus,
-.field__select:focus {
-  outline: none;
-  border-color: var(--color-ink);
-}
-
-.field__textarea {
-  min-height: 9rem;
-  resize: vertical;
-  line-height: 1.6;
-}
-
-.field__hint {
-  font-size: var(--step--1);
-  color: var(--color-text-muted);
-}
-
-/* ===========================================================================
-   Reduced motion
-   ---------------------------------------------------------------------------
-   Not "slower" — absent. Every transform-based entrance resolves instantly
-   to its final state, and the smooth scroll is never started.
-   =========================================================================== */
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+    background: var(--color-ink);
   }
 
-  .js [data-reveal],
-  .js [data-image-reveal] {
-    opacity: 1;
-    transform: none;
-    clip-path: none;
+  /* A centred panel on a desktop, where a full-bleed black page for one photo
+     reads as a navigation rather than a lightbox. */
+  @media (min-width: 768px) {
+    .gallery-dialog {
+      width: min(64rem, calc(100vw - 4rem));
+      height: min(46rem, calc(100svh - 4rem));
+      margin: auto;
+      border: 1px solid var(--color-line-dark);
+    }
+
+    .gallery-dialog::backdrop {
+      background: color-mix(in srgb, var(--color-ink) 88%, transparent);
+      backdrop-filter: blur(4px);
+    }
   }
 
-  .js [data-image-reveal] > *,
-  .js .line-mask > span {
-    transform: none;
+  /* ===========================================================================
+     Buttons
+     =========================================================================== */
+
+  .btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.9rem 1.5rem;
+    border: 1px solid var(--color-ink);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    line-height: 1;
+    overflow: hidden;
+    isolation: isolate;
+    transition: color 0.5s var(--ease-out);
   }
-}
 
-/* Utility for content that is only for screen readers, used on skip links
-   and icon-only controls. */
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-  border: 0;
-}
+  /* The fill rises from the bottom on hover. Doing it with a pseudo-element
+     that is already painted keeps the animation on `transform`, so it costs a
+     compositor layer and nothing else. */
+  .btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--color-ink);
+    transform: translate3d(0, 101%, 0);
+    transition: transform 0.55s var(--ease-out);
+  }
 
-.skip-link {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 200;
-  padding: 0.75rem 1.25rem;
-  background: var(--color-ink);
-  color: var(--color-paper);
-  font-family: var(--font-mono);
-  font-size: var(--step--1);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  transform: translateY(-120%);
-  transition: transform 0.3s var(--ease-out);
-}
+  .btn:hover::before,
+  .btn:focus-visible::before {
+    transform: translate3d(0, 0, 0);
+  }
 
-.skip-link:focus {
-  transform: translateY(0);
+  .btn--solid {
+    background: var(--color-ink);
+    color: var(--color-paper);
+  }
+
+  .btn--solid::before {
+    background: var(--color-accent);
+    transform: translate3d(0, 101%, 0);
+  }
+
+  .btn--solid:hover,
+  .btn--solid:focus-visible {
+    color: var(--color-paper);
+  }
+
+  .btn--ghost {
+    border-color: var(--color-line);
+    color: var(--color-text);
+  }
+
+  .btn--ghost:hover,
+  .btn--ghost:focus-visible {
+    color: var(--color-paper);
+    border-color: var(--color-ink);
+  }
+
+  .btn--on-dark {
+    border-color: rgb(255 255 255 / 0.28);
+    color: var(--color-paper);
+  }
+
+  .btn--on-dark::before {
+    background: var(--color-paper);
+  }
+
+  .btn--on-dark:hover,
+  .btn--on-dark:focus-visible {
+    color: var(--color-ink);
+    border-color: var(--color-paper);
+  }
+
+  /* Filled white button, for a light-on-dark hero that is *not* full-bleed dark.
+     The editorial hero sits on white, so its primary action inverts: white text
+     on a hairline would disappear into the page. */
+  .btn--paper {
+    background: var(--color-ink);
+    border-color: var(--color-ink);
+    color: var(--color-paper);
+  }
+
+  .btn--paper::before {
+    background: var(--color-accent);
+  }
+
+  .btn--paper:hover,
+  .btn--paper:focus-visible {
+    color: var(--color-paper);
+    border-color: var(--color-accent);
+  }
+
+  /* Tombol utama di atas permukaan gelap.
+     `btn--on-dark` hanya bergaris, jadi tiga tombol bergaris berdampingan
+     terbaca setara — pengunjung harus memilih tanpa alasan. Varian ini mengisi
+     satu tombol dengan kertas, sehingga hierarkinya terbaca sebelum teksnya
+     dibaca. Sama seperti `.btn--paper` di atas kertas terang, hanya dibalik. */
+  .btn--fill-light {
+    background: var(--color-paper);
+    border-color: var(--color-paper);
+    color: var(--color-ink);
+  }
+
+  .btn--fill-light::before {
+    background: var(--color-accent);
+  }
+
+  .btn--fill-light:hover,
+  .btn--fill-light:focus-visible {
+    color: var(--color-paper);
+    border-color: var(--color-accent);
+  }
+
+  .btn__arrow {
+    transition: transform 0.5s var(--ease-out);
+  }
+
+  .btn:hover .btn__arrow,
+  .btn:focus-visible .btn__arrow {
+    transform: translate3d(4px, 0, 0);
+  }
+
+  /* Text link with a rule that draws itself in. */
+  .link-line {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .link-line::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -3px;
+    height: 1px;
+    width: 100%;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.5s var(--ease-out);
+  }
+
+  .link-line:hover::after,
+  .link-line:focus-visible::after {
+    transform: scaleX(1);
+  }
+
+  /* ===========================================================================
+     Forms — shared by the admin dashboard and the public contact form.
+     =========================================================================== */
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .field__label {
+    font-family: var(--font-mono);
+    font-size: var(--step--2);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .field__input,
+  .field__textarea,
+  .field__select {
+    width: 100%;
+    padding: 0.75rem 0.9rem;
+    background: var(--color-paper);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    font-size: var(--step-0);
+    transition: border-color 0.3s var(--ease-out);
+  }
+
+  .field__input:hover,
+  .field__textarea:hover,
+  .field__select:hover {
+    border-color: var(--color-text-faint);
+  }
+
+  .field__input:focus,
+  .field__textarea:focus,
+  .field__select:focus {
+    outline: none;
+    border-color: var(--color-ink);
+  }
+
+  .field__textarea {
+    min-height: 9rem;
+    resize: vertical;
+    line-height: 1.6;
+  }
+
+  .field__hint {
+    font-size: var(--step--1);
+    color: var(--color-text-muted);
+  }
+
+  /* ===========================================================================
+     Reduced motion
+     ---------------------------------------------------------------------------
+     Not "slower" — absent. Every transform-based entrance resolves instantly
+     to its final state, and the smooth scroll is never started.
+     =========================================================================== */
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+
+    .js [data-reveal],
+    .js [data-image-reveal] {
+      opacity: 1;
+      transform: none;
+      clip-path: none;
+    }
+
+    .js [data-image-reveal] > *,
+    .js .line-mask > span {
+      transform: none;
+    }
+  }
+
+  /* Utility for content that is only for screen readers, used on skip links
+     and icon-only controls. */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .skip-link {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 200;
+    padding: 0.75rem 1.25rem;
+    background: var(--color-ink);
+    color: var(--color-paper);
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transform: translateY(-120%);
+    transition: transform 0.3s var(--ease-out);
+  }
+
+  .skip-link:focus {
+    transform: translateY(0);
+  }
 }

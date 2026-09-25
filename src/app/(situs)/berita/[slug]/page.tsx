@@ -158,7 +158,7 @@ export default async function NewsDetailPage({
               <time dateTime={published} className="label text-[var(--color-text-muted)]">
                 {formatDateId(published)}
               </time>
-              <span className="label text-[var(--color-text-faint)]">
+              <span className="label text-[var(--color-text-muted)]">
                 {readingMinutes(article.content)} menit baca
               </span>
             </div>
@@ -221,7 +221,7 @@ export default async function NewsDetailPage({
                   <Link href={`/berita/${item.slug}`} className="group block">
                     <time
                       dateTime={item.publishedAt ?? item.createdAt}
-                      className="label text-[var(--color-text-faint)]"
+                      className="label text-[var(--color-text-muted)]"
                     >
                       {formatDateId(item.publishedAt ?? item.createdAt)}
                     </time>

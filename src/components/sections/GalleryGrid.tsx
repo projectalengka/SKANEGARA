@@ -9,14 +9,42 @@ import { cn } from '@/lib/utils';
 /**
  * The gallery.
  *
- * An immersive mosaic rather than a uniform grid: plates alternate between
- * portrait and landscape, and every second one is offset downward. On a phone it
- * collapses to a single column — an asymmetric grid on a 390px screen is just a
- * column with unexplained gaps. The generous `gap-y` is what stops the vertical
- * offset from reading as a mistake rather than a rhythm.
+ * An immersive mosaic rather than a uniform grid. On a phone it collapses to a
+ * single column — an asymmetric grid on a 390px screen is just a column with
+ * unexplained gaps.
  *
- * The lightbox is built rather than pulled from a library, and the reasons are
- * specific:
+ * ## The composition, and why it changed
+ *
+ * It used to be three plates across, each 604–668px tall, which measured as
+ * 2,038px of page for six photographs. That is 340px of vertical travel per
+ * photo — a rate that makes a gallery feel like a chore. The tiles are smaller
+ * and there are more of them per row now, which is what a contact sheet is:
+ *
+ *     wide   3:2   six columns      (a full half of the measure)
+ *     tall   1:1   three columns
+ *     tall   1:1   three columns
+ *     tall   1:1   three columns
+ *     tall   1:1   three columns
+ *     wide   3:2   six columns
+ *
+ * Two clean rows of twelve columns each, opening and closing on a wide plate, so
+ * the composition has a shape rather than just stopping. The vertical offsets
+ * that used to stagger every second tile are gone: with mixed heights inside a
+ * row, the offset was fighting the rhythm instead of adding to it.
+ *
+ * ## Why the tiles are square and 3:2 rather than 4:5
+ *
+ * The photographs in this gallery are shot landscape — 475×356, a 4:3 frame.
+ * Fitting that into a 4:5 portrait box means `object-cover` throws away about
+ * 40% of the width, and the source is only 475px wide to begin with, so the
+ * remaining strip is also enlarged. A square tile crops 25%; a 3:2 tile crops
+ * almost nothing. The mosaic keeps its variety of shape either way, because the
+ * variety that reads is the *difference between the tiles*, not the extremity of
+ * any one of them.
+ *
+ * ## The lightbox
+ *
+ * Built rather than pulled from a library, and the reasons are specific:
  *
  *  - It is a real `<dialog>` opened with `showModal()`. The browser then gives
  *    us the modal behaviour for free: the dialog is promoted to the top layer,
@@ -134,14 +162,19 @@ export function GalleryGrid({ items }: { items: GalleryContent[] }) {
 
   return (
     <>
-      <ul className="grid grid-cols-1 gap-x-5 gap-y-12 sm:grid-cols-2 lg:grid-cols-12 lg:gap-x-6">
+      <ul className="grid grid-cols-1 gap-x-5 gap-y-10 sm:grid-cols-2 lg:grid-cols-12 lg:gap-x-6">
         {items.map((item, index) => {
-          const isPortrait = index % 3 === 0;
-          const span = isPortrait ? 'lg:col-span-4' : index % 3 === 1 ? 'lg:col-span-5' : 'lg:col-span-3';
-          const offset = index % 2 === 1 ? 'lg:pt-16' : '';
+          // Two clean rows of twelve columns: wide, tall, tall / tall, tall, wide.
+          const slot = index % 6;
+          const isWide = slot === 0 || slot === 5;
+          const span = isWide ? 'lg:col-span-6' : 'lg:col-span-3';
+          const ratio = isWide ? 'aspect-3/2' : 'aspect-1/1';
+          const sizes = isWide
+            ? '(max-width: 640px) 100vw, 50vw'
+            : '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw';
 
           return (
-            <li key={item.id} className={cn(span, offset)}>
+            <li key={item.id} className={span}>
               <button
                 type="button"
                 className="group block w-full text-left"
@@ -159,10 +192,7 @@ export function GalleryGrid({ items }: { items: GalleryContent[] }) {
                   would fight and the hover would be the one that lost.
                 */}
                 <span
-                  className={cn(
-                    'relative block overflow-hidden',
-                    isPortrait ? 'aspect-4/5' : 'aspect-4/3',
-                  )}
+                  className={cn('relative block overflow-hidden bg-[var(--color-ink)]/5', ratio)}
                   data-image-reveal
                 >
                   <span className="absolute inset-0 block">
@@ -170,8 +200,8 @@ export function GalleryGrid({ items }: { items: GalleryContent[] }) {
                       src={item.image}
                       alt={item.title}
                       fill
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      className="object-cover transition-transform duration-[1.2s] group-hover:scale-[1.04]"
+                      sizes={sizes}
+                      className="object-cover transition-transform duration-[1.05s] group-hover:scale-[1.04]"
                       style={{ transitionTimingFunction: 'var(--ease-out)' }}
                     />
                   </span>
@@ -182,7 +212,9 @@ export function GalleryGrid({ items }: { items: GalleryContent[] }) {
                 </span>
 
                 <span className="mt-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-t border-[var(--color-line)] pt-3">
-                  <span className="display text-[length:var(--step-2)]">{item.title}</span>
+                  <span className="display display-close text-[length:var(--step-2)]">
+                    {item.title}
+                  </span>
                   <span className="label text-[var(--color-text-muted)]">{item.category}</span>
                 </span>
 

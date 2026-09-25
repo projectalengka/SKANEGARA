@@ -44,7 +44,7 @@ export default function Error({
         <p className="prose-body mt-8">{ui.serverErrorBody}</p>
 
         {error.digest ? (
-          <p className="label mt-6 text-[var(--color-text-faint)]">Kode: {error.digest}</p>
+          <p className="label mt-6 text-[var(--color-text-muted)]">Kode: {error.digest}</p>
         ) : null}
 
         <div className="mt-10 flex flex-wrap gap-3">

@@ -212,7 +212,24 @@ export function SiteHeader({ schoolName }: { schoolName: string }) {
                     href={item.href}
                     aria-current={isActive(item.href) ? 'page' : undefined}
                     className={cn(
-                      'group relative block px-3 py-2 font-[family-name:var(--font-mono)] text-[length:var(--step--2)] uppercase tracking-[0.12em] transition-colors duration-300',
+                      // --step--2 sampai xl, --step--1 mulai xl.
+                      //
+                      // Tautan ini berukuran 10–11px, dan itu memang kecil untuk
+                      // teks yang harus dipindai. Menaikkannya ke 12–13px di
+                      // SEMUA lebar ternyata tidak bisa: pada 1024px, isi shell
+                      // hanya 960px, sementara wordmark (122) + navigasi (968,
+                      // sudah termasuk padding) + dua gap 24px + tombol CTA
+                      // (147) berjumlah 1016px — kurang 56px. Flex tidak
+                      // meluap; ia MENYUSUT, dan teksnya melipat jadi dua baris
+                      // di dalam bilah yang tingginya tetap. Diukur: "Tentang
+                      // Kami", "Program Keahlian", dan "Karya Siswa" masing-
+                      // masing jadi dua baris pada 1024px dan 1080px.
+                      //
+                      // `xl` (1280px) adalah titik aman terdekat yang sudah ada
+                      // di Tailwind: di sana tersedia 1216px dan yang dibutuhkan
+                      // 1036px — sisa 180px. Jadi ukuran yang lebih terbaca itu
+                      // dipakai persis di tempat yang punya ruang untuknya.
+                      'group relative block px-3 py-2 font-[family-name:var(--font-mono)] text-[length:var(--step--2)] uppercase tracking-[0.12em] transition-colors duration-300 xl:text-[length:var(--step--1)]',
                       isActive(item.href)
                         ? 'text-[var(--color-text)]'
                         : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]',
@@ -234,7 +251,7 @@ export function SiteHeader({ schoolName }: { schoolName: string }) {
           </nav>
 
           <div className="flex items-center gap-3" data-hero="nav">
-            <Link href="/kontak" className="btn btn--solid hidden !px-4 !py-2.5 sm:inline-flex">
+            <Link href="/kontak" className="btn btn--solid hidden px-4 py-2.5 sm:inline-flex">
               Hubungi Kami
               <span className="btn__arrow" aria-hidden="true">
                 →

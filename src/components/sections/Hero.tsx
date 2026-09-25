@@ -40,7 +40,7 @@ export function Hero({ profile, section, programs }: {
               {featured.map((program, index) => (
                 <Link key={program.id} href={`/program-keahlian/${program.slug}`} className="hero-program">
                   <span className="hero-program__image">
-                    <Image src={program.image || '/images/program-placeholder.svg'} alt="" fill priority={index === 0} sizes="(max-width: 767px) 40vw, 24vw" className="object-cover" />
+                    <Image src={program.image || '/images/program-placeholder.svg'} alt="" fill priority={index === 0} sizes="3.5rem" className="object-cover" />
                     {program.image.startsWith('/images/') ? <span className="hero-program__note label">Ilustrasi program</span> : null}
                   </span>
                   <span className="hero-program__caption"><span className="label">0{index + 1}</span><span>{program.name}</span><span aria-hidden="true">↗</span></span>

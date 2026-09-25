@@ -98,7 +98,7 @@ export default async function NewsPage() {
                               <span className="label text-[var(--color-accent)]">{item.category}</span>
                               <time
                                 dateTime={item.publishedAt ?? item.createdAt}
-                                className="label text-[var(--color-text-faint)]"
+                                className="label text-[var(--color-text-muted)]"
                               >
                                 {formatDateId(item.publishedAt ?? item.createdAt)}
                               </time>

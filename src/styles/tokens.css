@@ -45,6 +45,17 @@
   --font-sans: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
+  /* -- Tracking -----------------------------------------------------------
+     Satu nilai tracking TIDAK bisa melayani semua ukuran. -0.035em adalah
+     nilai yang benar untuk judul 60–104px: tanpa serif, huruf-huruf besar
+     berdiri berjarak dan judulnya terasa longgar. Tapi pada judul kartu
+     21–25px, angka yang sama membuat huruf saling menempel dan kata jadi
+     sulit dipindai. Karena itu ada dua, dan pemakaiannya ditentukan ukuran,
+     bukan selera.
+     ---------------------------------------------------------------------- */
+  --tracking-display: -0.035em; /* --step-5 ke atas */
+  --tracking-close: -0.016em; /* --step-2 … --step-4 */
+
   /* -- Motion -------------------------------------------------------------
      Expo-out. Fast departure, long settle. A symmetric ease reads as
      "mechanical"; this reads as a thing with weight coming to rest.
@@ -202,12 +213,54 @@
      is untouched, so desktop hero weight is unchanged. */
   --step-8: clamp(2.9375rem, 1.5673rem + 5.4808vw, 6.5rem); /* 47 → 104px hero */
 
-  --section-y: clamp(5rem, 3rem + 9vw, 12rem);
-  --nav-h: 4.5rem;
+  --section-y: var(--space-normal);
+  --nav-h: 4.25rem;
 }
 
 @media (min-width: 1024px) {
   :root {
-    --nav-h: 5.5rem;
+    --nav-h: 4.75rem;
   }
+}
+
+/* ===========================================================================
+   Spacing scale — three tiers, not one constant
+   ---------------------------------------------------------------------------
+   The page used to separate every section by the same `--section-y`, and the
+   result was measured on the live site: eight sections, all 177.6px of padding
+   top and bottom, so no section was ever more important than any other. Uniform
+   spacing is not tidy — it is the absence of hierarchy. Distance is a signal,
+   and a signal that never varies carries no information.
+
+   Three tiers, each a fixed multiple of the one below, derived the same way as
+   the type scale above (see the note there — the units are the whole
+   difficulty):
+
+       B = (maxPx − minPx) / 10.4     [px per vw-unit]
+       K = minPx − B · 4.0            [px]
+       A = K / 16                     [rem]
+
+   tier     min   max    B (vw)   A (rem)   used for
+   tight     48    88    3.85     2.04      paired blocks that belong together
+   normal    72   136    6.15     2.96      the default; unchanged in character
+   wide      96   224   12.31     2.93      a change of chapter, or of surface
+
+   The 400→1440px window is the same one the type scale uses, so the *ratio*
+   between tiers is stable at every width and a section does not change
+   personality between a laptop and a monitor.
+
+   HOW TO CHOOSE A TIER — the rule that makes this a system
+   -------------------------------------------------------
+   Two blocks that talk about the same thing sit close: tight.
+   A change of subject sits at normal.
+   A change of chapter — or of surface, light to dark — sits wide.
+
+   If a section's tier is chosen by habit rather than by that rule, the scale
+   collapses back into a constant and this comment becomes decoration.
+   =========================================================================== */
+
+:root {
+  --space-tight: clamp(3rem, 2.04rem + 3.85vw, 5.5rem);
+  --space-normal: clamp(4.5rem, 2.96rem + 6.15vw, 8.5rem);
+  --space-wide: clamp(6rem, 2.93rem + 12.31vw, 14rem);
 }

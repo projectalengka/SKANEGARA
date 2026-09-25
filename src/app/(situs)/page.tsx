@@ -84,7 +84,11 @@ export default async function HomePage() {
     <>
       {hero ? <Hero profile={profile} section={hero} programs={programs} /> : null}
       <OrientationStrip profile={profile} />
-      {introduction ? <Introduction section={introduction} /> : null}
+      {/* The gallery photographs are handed to the introduction as well, so the
+          third screen carries three real photographs instead of none. They are
+          the same rows the gallery section below already reads — one query, two
+          places, no extra request. */}
+      {introduction ? <Introduction section={introduction} photos={gallery} /> : null}
       {about ? <About profile={profile} section={about} /> : null}
       {programsSection ? <ProgramsSection section={programsSection} programs={programs} /> : null}
       {experience ? <ExperienceSection section={experience} photos={gallery} /> : null}
