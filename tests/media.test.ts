@@ -321,3 +321,76 @@ describe('the upload field and the server actions agree on field names', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// 8. Replacing or clearing an image deletes the asset it replaced
+
+/** The source of one top-level function, from its signature to the next one. */
+function functionBody(source: string, signature: string): string {
+  const start = source.indexOf(signature);
+  assert.notEqual(start, -1, `${signature} tidak ditemukan di content-actions.ts`);
+
+  const stops = [
+    source.indexOf('\nexport ', start + signature.length),
+    source.indexOf('\nasync function ', start + signature.length),
+  ].filter((index) => index !== -1);
+
+  const end = stops.length > 0 ? Math.min(...stops) : source.length;
+  return source.slice(start, end);
+}
+
+describe('replacing or clearing an image deletes the asset it replaced', () => {
+  const actions = code('src/app/admin/content-actions.ts');
+
+  it('has one helper that compares the previous id with the new one', () => {
+    const helper = functionBody(actions, 'async function deleteReplacedImage(');
+
+    assert.ok(
+      helper.includes('previousId !== nextId'),
+      'deleteReplacedImage() must compare the two ids, not delete unconditionally — ' +
+        'saving a row without changing its photo must not remove that photo',
+    );
+    assert.ok(
+      helper.includes('deleteImage(previousId)'),
+      'deleteReplacedImage() must actually delete the previous asset',
+    );
+  });
+
+  /*
+   * Setiap action penyimpanan, pasangan field yang dibaca, dan model yang
+   * ditulis. `saveNews` memakai `existing` karena sudah membaca barisnya untuk
+   * mempertahankan tanggal terbit; yang lain membaca baris lama khusus untuk
+   * membandingkan fotonya.
+   *
+   * Sebelum ini hanya `saveSchoolProfile` yang membersihkan aset lama. Akibatnya
+   * mengganti atau menghapus foto pada program, berita, galeri, karya, dan
+   * kegiatan meninggalkan baris `MediaAsset` yang tidak dirujuk siapa pun —
+   * terlihat di `npm run media:bersihkan` sebagai "dirujuk konten: 0", dan tetap
+   * memakan kuota basis data.
+   */
+  const cases = [
+    ['saveProgram', 'program.update', 'deleteReplacedImage(previous?.imagePublicId, data.imagePublicId)'],
+    ['saveNews', 'news.update', 'deleteReplacedImage(existing?.coverPublicId, data.coverPublicId)'],
+    ['saveGalleryItem', 'galleryItem.update', 'deleteReplacedImage(previous?.publicId, data.publicId)'],
+    ['saveStudentWork', 'studentWork.update', 'deleteReplacedImage(previous?.publicId, data.publicId)'],
+    ['saveEvent', 'event.update', 'deleteReplacedImage(previous?.publicId, data.publicId)'],
+  ] as const;
+
+  for (const [action, write, cleanup] of cases) {
+    it(`${action} deletes the photo it replaced`, () => {
+      const body = functionBody(actions, `export async function ${action}(`);
+
+      assert.ok(body.includes(cleanup), `${action} harus memanggil ${cleanup}`);
+
+      const writeAt = body.indexOf(write);
+      const cleanupAt = body.indexOf(cleanup);
+
+      assert.ok(writeAt !== -1, `${action} harus menulis lewat ${write}()`);
+      assert.ok(
+        writeAt < cleanupAt,
+        `${action} harus menghapus aset lama setelah baris baru tersimpan — urutan ` +
+          'sebaliknya meninggalkan baris yang menunjuk gambar yang sudah tidak ada',
+      );
+    });
+  }
+});
+

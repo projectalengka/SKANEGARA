@@ -321,8 +321,8 @@ export function NewsForm({
             <section className="border border-[var(--color-line)] bg-[var(--color-paper)] px-6 py-6">
               <h2 className="display text-[length:var(--step-3)]">Gambar Utama</h2>
               <p className="mt-2 text-[length:var(--step-0)] text-[var(--color-text-muted)]">
-                Unggah gambar melalui panel di atas. Bila dikosongkan, berita tetap dapat
-                diterbitkan tanpa gambar.
+                Tempel tautan gambar di bawah. Bila dikosongkan, berita tetap dapat diterbitkan
+                tanpa gambar.
               </p>
 
               <div className="mt-6">
@@ -338,8 +338,8 @@ export function NewsForm({
                   placeholder="/api/media/… atau https://…"
                 />
                 <p className="field__hint mt-2">
-                  Kosongkan bila belum ada gambar. Kolom ini untuk gambar dari luar; untuk gambar
-                  yang diunggah sendiri, pakai panel unggah di atas.
+                  Kosongkan bila belum ada gambar. Kolom ini menerima tautan: unggah foto lewat
+                  menu Galeri, lalu salin tautan <code className="font-[family-name:var(--font-mono)]">/api/media/…</code> ke sini.
                 </p>
                 {article?.coverImage ? (
                   <div className="relative mt-4 aspect-3/2 w-full max-w-md overflow-hidden border border-[var(--color-line)]">

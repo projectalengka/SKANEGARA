@@ -9,6 +9,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { code } from './source';
 import {
   defaultEvents,
   defaultGallery,
@@ -561,6 +562,57 @@ describe('sample content replaces seeded placeholders from any source', () => {
       sampleStudentWork.length > defaultStudentWork.length,
       `sample has ${sampleStudentWork.length} works, seed writes ${defaultStudentWork.length} â€” ` +
         'sample mode would be invisible on the works page',
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sample news is visible to readers, but must not be advertised to crawlers
+
+describe('sample news is not offered to search engines', () => {
+  it('keeps contoh- URLs out of the sitemap', async () => {
+    const originalDb = process.env.DATABASE_URL;
+    const originalSample = process.env.SAMPLE_DATA;
+
+    // No database means the content layer reads the sample set, which is exactly
+    // the state that produced the leak: the sitemap listed four `[CONTOH]`
+    // articles that the deployed site then served with `index, follow`.
+    delete process.env.DATABASE_URL;
+    process.env.SAMPLE_DATA = 'on';
+
+    try {
+      const { default: sitemap } = await import('../src/app/sitemap');
+      const entries = await sitemap();
+      const urls = entries.map((entry) => entry.url);
+
+      assert.ok(
+        urls.some((url) => url.includes('/berita')),
+        'the sitemap must still list the news index — the filter is too broad',
+      );
+      assert.ok(
+        urls.every((url) => !url.includes('contoh-')),
+        'sample articles must not be submitted to search engines; ' +
+          'a school search result filled with [CONTOH] news is a fabricated archive',
+      );
+    } finally {
+      if (originalDb === undefined) delete process.env.DATABASE_URL;
+      else process.env.DATABASE_URL = originalDb;
+
+      if (originalSample === undefined) delete process.env.SAMPLE_DATA;
+      else process.env.SAMPLE_DATA = originalSample;
+    }
+  });
+
+  it('marks a sample article noindex, as a second layer', () => {
+    const page = code('src/app/(situs)/berita/[slug]/page.tsx');
+
+    assert.ok(
+      page.includes('isSampleId(article.id)'),
+      'the article page must recognise a sample row by its id',
+    );
+    assert.ok(
+      page.includes('robots: example ? { index: false, follow: false }'),
+      'a sample article must override the root layout\'s `index, follow`',
     );
   });
 });

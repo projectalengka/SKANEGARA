@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { getNews, getPrograms } from '@/lib/content';
+import { isSampleId } from '@/lib/sample-id';
 import { absoluteUrl } from '@/lib/utils';
 
 /**
@@ -36,19 +37,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  const newsRoutes: MetadataRoute.Sitemap = news.map((item) => ({
-    url: absoluteUrl(`/berita/${item.slug}`),
-    // The one route here with a *real* last-modified date. `now` for every
-    // static route is honest enough (the school can edit any of them at any
-    // time) but for an article the publication date is the fact, so it is used
-    // rather than thrown away.
-    lastModified: new Date(item.publishedAt ?? item.createdAt),
-    // A news article is not yearly content — `yearly` told crawlers the archive
-    // almost never changes, which is the opposite of true for a school that
-    // posts through the term.
-    changeFrequency: 'monthly',
-    priority: 0.6,
-  }));
+  /*
+   * Contoh berita tidak ikut ke sitemap.
+   *
+   * Baris contoh memang tampil di situs supaya tata letaknya bisa dinilai, tetapi
+   * mengundang mesin pencari mengindeks artikel `[CONTOH]` berarti hasil
+   * pencarian sekolah berisi berita karangan. Halaman itu sendiri juga diberi
+   * `noindex`; ini lapis kedua, karena sitemap adalah undangan yang jauh lebih
+   * langsung daripada tautan biasa.
+   */
+  const newsRoutes: MetadataRoute.Sitemap = news
+    .filter((item) => !isSampleId(item.id))
+    .map((item) => ({
+      url: absoluteUrl(`/berita/${item.slug}`),
+      // The one route here with a *real* last-modified date. `now` for every
+      // static route is honest enough (the school can edit any of them at any
+      // time) but for an article the publication date is the fact, so it is used
+      // rather than thrown away.
+      lastModified: new Date(item.publishedAt ?? item.createdAt),
+      // A news article is not yearly content — `yearly` told crawlers the archive
+      // almost never changes, which is the opposite of true for a school that
+      // posts through the term.
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    }));
 
   return [...staticRoutes, ...programRoutes, ...newsRoutes];
 }

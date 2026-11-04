@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getNews, getNewsBySlug, getSchoolProfile } from '@/lib/content';
+import { isSampleId } from '@/lib/sample-id';
 import { absoluteUrl, formatDateId, readingMinutes, siteUrl } from '@/lib/utils';
 import { ui } from '@/data/defaults';
 
@@ -35,10 +36,23 @@ export async function generateMetadata({
   const article = await getNewsBySlug(slug);
   if (!article) return { title: 'Berita tidak ditemukan' };
 
+  /*
+   * Artikel contoh tidak boleh masuk indeks mesin pencari.
+   *
+   * Judulnya sudah diawali `[CONTOH]` untuk pembaca manusia, dan slug-nya
+   * diawali `contoh-`, tetapi mesin pencari tidak membaca niat — ia membaca
+   * halaman yang tampil 200. Sebelum ini, Google menerima `index, follow` untuk
+   * `/berita/contoh-upacara-bendera`, dan sitemap mengundangnya secara eksplisit.
+   * Sitemap juga menyaringnya; dua lapis, karena keduanya bisa dikunjungi lewat
+   * jalur yang berbeda.
+   */
+  const example = isSampleId(article.id) || article.title.startsWith('[');
+
   return {
     title: article.title,
     description: article.excerpt,
     alternates: { canonical: `/berita/${article.slug}` },
+    robots: example ? { index: false, follow: false } : undefined,
     openGraph: {
       type: 'article',
       title: article.title,

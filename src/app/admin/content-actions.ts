@@ -299,11 +299,20 @@ export async function saveProgram(formData: FormData): Promise<ActionResult> {
       published: readBool(formData, 'published'),
     };
 
+    // Dibaca sebelum menulis, agar aset foto lama bisa dihapus setelah baris
+    // barunya tersimpan. Tanpa ini setiap penggantian foto program meninggalkan
+    // aset yatim yang tetap memakan kuota penyimpanan.
+    const previous = id
+      ? await prisma.program.findUnique({ where: { id }, select: { imagePublicId: true } })
+      : null;
+
     if (id) {
       await prisma.program.update({ where: { id }, data });
     } else {
       await prisma.program.create({ data });
     }
+
+    await deleteReplacedImage(previous?.imagePublicId, data.imagePublicId);
 
     revalidateContent(mainTags.programs);
     revalidatePath(`/program-keahlian/${slug}`);
@@ -405,6 +414,8 @@ export async function saveNews(formData: FormData): Promise<ActionResult> {
     } else {
       await prisma.news.create({ data });
     }
+
+    await deleteReplacedImage(existing?.coverPublicId, data.coverPublicId);
 
     revalidateContent(mainTags.news);
     revalidatePath(`/berita/${slug}`);
@@ -521,11 +532,17 @@ export async function saveGalleryItem(formData: FormData): Promise<ActionResult>
     const refusal = sampleRowRefusal(id);
     if (refusal) return refusal;
 
+    const previous = id
+      ? await prisma.galleryItem.findUnique({ where: { id }, select: { publicId: true } })
+      : null;
+
     if (id) {
       await prisma.galleryItem.update({ where: { id }, data });
     } else {
       await prisma.galleryItem.create({ data });
     }
+
+    await deleteReplacedImage(previous?.publicId, data.publicId);
 
     revalidateContent(mainTags.gallery);
     return { ok: true, message: 'Data berhasil disimpan.' };
@@ -596,11 +613,17 @@ export async function saveStudentWork(formData: FormData): Promise<ActionResult>
     const refusal = sampleRowRefusal(id);
     if (refusal) return refusal;
 
+    const previous = id
+      ? await prisma.studentWork.findUnique({ where: { id }, select: { publicId: true } })
+      : null;
+
     if (id) {
       await prisma.studentWork.update({ where: { id }, data });
     } else {
       await prisma.studentWork.create({ data });
     }
+
+    await deleteReplacedImage(previous?.publicId, data.publicId);
 
     revalidateContent(mainTags.work);
     return { ok: true, message: 'Data berhasil disimpan.' };
@@ -682,11 +705,17 @@ export async function saveEvent(formData: FormData): Promise<ActionResult> {
     const refusal = sampleRowRefusal(id);
     if (refusal) return refusal;
 
+    const previous = id
+      ? await prisma.event.findUnique({ where: { id }, select: { publicId: true } })
+      : null;
+
     if (id) {
       await prisma.event.update({ where: { id }, data });
     } else {
       await prisma.event.create({ data });
     }
+
+    await deleteReplacedImage(previous?.publicId, data.publicId);
 
     revalidateContent(mainTags.events);
     return { ok: true, message: 'Data berhasil disimpan.' };
@@ -953,6 +982,27 @@ async function inOneStep(
   if (!client || pending.length === 0) return;
 
   await client.$transaction(pending);
+}
+
+/**
+ * Removes the asset a row pointed at before an edit replaced or cleared it.
+ *
+ * Deletion happens *after* the row has been written, and a failure is only
+ * logged by `deleteImage()`. The ordering matters for the same reason as
+ * everywhere else in this file: a broken image on the public site is worse than
+ * a few kilobytes of orphaned quota.
+ *
+ * `nextId` may be an empty string — the administrator pressed "Hapus gambar" —
+ * in which case the old asset is still deleted, because nothing references it
+ * any more.
+ */
+async function deleteReplacedImage(
+  previousId: string | null | undefined,
+  nextId: string,
+): Promise<void> {
+  if (previousId && previousId !== nextId) {
+    await deleteImage(previousId);
+  }
 }
 
 /** Removes the stored bytes behind rows that are about to be deleted. */
